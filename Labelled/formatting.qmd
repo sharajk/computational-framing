@@ -1,0 +1,255 @@
+---
+title: "Formatting and saving labelled articles"
+author: "Sharaj Kunjar"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+Code to compile all the labelled data
+
+# Load libraries
+
+```{r}
+library(irr)
+library(Metrics)
+```
+
+# Helper functions
+
+### Format columns
+
+Standardize all annotations across multiple annotators and keep only specific columns
+
+```{r}
+format_columns <- function(df, keep_columns)
+{
+  colnames(df) <- tolower(colnames(df))
+  df <- df[,keep_columns]
+  
+  return(df)
+}
+```
+
+### Calculating metrics
+
+Create a function that outputs accuracy, cohen's kappa, f1 score, precision and recall between pairs of annotators:
+
+1.  Standardized annotation dataframes for each annotator (dlist)
+2.  The "theme" label (frame in this case) to compare annotations across
+3.  Rater names A1 and A2
+4.  Column names where the labels for A1 and A2 lie respectively
+5.  Indicator on what to do with NA values (dropNA = T by default)
+
+```{r}
+calculate_scores <- function(dlist, A1, A2, column_A1, column_A2, column_match = "stories_id", dropNA = T, silent = T)
+{
+  dfA1 <- dlist[[A1]]
+  dfA2 <- dlist[[A2]]
+
+  kdf1 <- merge(dfA1, dfA2, by.x = column_match, by.y = column_match, all = F)
+
+  #if column names for A1 and A2 are same
+  if(column_A1 == column_A2)
+  {
+    kdf <- kdf1[,c(paste0(column_A1, ".x"), paste0(column_A2, ".y"))]
+  }
+
+  else
+  {
+    kdf <- kdf1[,c(column_A1, column_A2)]
+  }
+
+  colnames(kdf) <- c("A1", "A2")
+
+  if(dropNA)
+  {
+    kdf <- kdf[complete.cases(kdf),]
+  }
+
+  klist <- kappa2(kdf) #kappa calculation
+  k <- round(klist$value, 2) #Cohen's Kappa
+
+  acc <- round(accuracy(kdf[,1],kdf[,2]),2) #accuracy
+  prec <- round(precision(kdf[,1], kdf[,2]), 2) #precision
+  rec <- round(recall(kdf[,1], kdf[,2]), 2) #recall
+  F1 <- round(2*prec*rec/(prec + rec), 2) #F1 score cos the f1 func is broken
+
+  metric_vec <- c(acc, k, F1, prec, rec)
+  
+  if(silent == F)
+  {
+    print(paste0("Accuracy is ", acc, "; Cohen's kappa is ", k, "; F1 score is ",F1,
+               "; Precision is ", prec, "; Recall is ", rec))
+  }
+
+  return(metric_vec)
+}
+
+```
+
+# Relevance
+
+### Compile
+
+Annotations available:
+
+1.  First author (A1) manual annotations for rounds 1 and 2
+2.  Third author (A2) manual annotations for round 1 and 2
+3.  Naive Bayes
+4.  BERT large cased
+5.  DeBERTa-v3-small
+6.  Llama-3.1-8B-Instruct (8-bit quantized) zero-shot
+7.  Llama-3.1-8B-Instruct (8-bit quantized) fine-tuned
+8.  Claude Sonnet 4
+9.  GPT-OSS-20B
+
+```{r}
+
+#create a list of dataframes
+relevance_list <- list(
+  #First author
+  "a1_r1" = read.csv("Relevance/Human/A1_r1.csv"),
+  "a1_r2" = read.csv("Relevance/Human/A1_r2.csv"),
+  
+  #Second author
+  "a2_r1" = read.csv("Relevance/Human/A2_r1.csv"),
+  "a2_r2" = read.csv("Relevance/Human/A2_r2.csv"),
+  
+  #Smaller language models
+  "naive_bayes" = read.csv("Relevance/SLM/naive_bayes_test.csv"),
+  "bert" = read.csv("Relevance/SLM/bert_test.csv"),
+  "deberta" = read.csv("Relevance/SLM/deberta_test.csv"),
+  
+  #Large language models (post 2023)
+  "llama_zero-shot" = read.csv("Relevance/LLM/Predicted/llama3.1:8b-instruct-q8_0_zshot_withCB.csv"),
+  "llama_fine-tuned" = read.csv("Relevance/LLM/Predicted/llama3.1:8b-instruct-q8_0_ft.csv"),
+  "claude_zero-shot" = read.csv("Relevance/LLM/Predicted/claude-sonnet-4-20250514_zshot_withCB.csv"),
+  "gpt-oss_zero-shot" = read.csv("Relevance/LLM/Predicted/gpt-oss-20b-zshot_withCB.csv")
+)
+
+keep_columns <- c("stories_id","media_name", "title","url","text","keywords", "relevance")
+relevance_list <- lapply(relevance_list, format_columns, keep_columns = keep_columns)
+
+save(relevance_list, file = "Labelled/Relevance_test.RData")
+
+```
+
+### Evaluate
+
+Calculate how different annotators performed on the relevance coding task with respect to each other on the test set.
+
+```{r}
+A1 <- "a1_r1" #annotator 1
+A2 <- "a2_r1" #annotator 2
+
+column_A1 <- "relevance" #predictions for annotator 1
+column_A2 <- "relevance" #predictions for annotator 2
+column_match <- "stories_id" #column used to track the annotation file IDs
+
+
+calculate_scores(relevance_list, A1, A2, column_A1, column_A2, column_match)
+
+```
+
+### Extrapolate
+
+Extrapolate labels onto the entire dataset of 3314 articles for further analysis.
+
+```{r}
+df_all <- read.csv("Relevance/SLM/bert_all.csv")
+write.csv(df_all, "Labelled/relevance_all.csv", row.names = F)
+
+```
+
+# Frame Detection
+
+## Compile
+
+Annotations available:
+
+1.  First author (A1) manual annotations for rounds 1 and 2
+2.  Third author (A2) manual annotations for round 1 and 2
+3.  Naive Bayes
+4.  BERT large cased
+5.  DeBERTa-v3-small
+6.  Llama-3.1-8B-Instruct (8-bit quantized) zero-shot
+7.  Llama-3.1-8B-Instruct (8-bit quantized) fine-tuned
+8.  Llama-3.1-8B-Instruct (8-bit quantized) with LLM as judge
+9.  Llama-3.1-8B-Instruct (8-bit quantized) with human feedback
+10. Llama-3.1-8B-Instruct (8-bit quantized) with decision trees
+11. Llama-3.1-8B-Instruct (8-bit quantized) with confidence scores
+12. Claude Sonnet 4
+13. GPT-OSS-20B
+14. Ensemble classifier
+
+```{r}
+#create a list of dataframes
+framing_list <- list(
+  #First author
+  "a1_r1" = read.csv("Framing/Human/A1_r1.csv", check.names = F),
+  "a1_r2" = read.csv("Framing/Human/A1_r2.csv", check.names = F),
+  
+  #Second author
+  "a2_r1" = read.csv("Framing/Human/A2_r1.csv", check.names = F),
+  "a2_r2" = read.csv("Framing/Human/A2_r2.csv", check.names = F),
+  
+  #Smaller language models
+  "naive_bayes" = read.csv("Framing/SLM/naive_bayes_test.csv", check.names = F),
+  "bert" = read.csv("Framing/SLM/bert_test.csv", check.names = F),
+  "deberta" = read.csv("Framing/SLM/deberta_test.csv", check.names = F),
+
+  #Large language models (post 2023)
+  "llama_zero-shot" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_zshot_1to1.csv", check.names = F),
+  "llama_ft" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_ft_1to1.csv", check.names = F),
+  "llama_llm_judge" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_LLM_judge.csv", check.names = F),
+  "llama_human_feedback" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_human_judge.csv", check.names = F),
+  "llama_decision" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_decision_tree.csv", check.names = F),
+  "llama_confidence" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_confidence.csv", check.names = F),
+  "claude_zero-shot" = read.csv("Framing/LLM/Predicted/claude-sonnet-4-20250514_zshot.csv", check.names = F),
+  "gpt-oss_zero-shot" = read.csv("Framing/LLM/Predicted/gpt-oss-20b-zshot.csv", check.names = F)
+)
+
+keep_columns <- c("stories_id","media_name", "title","url","text","keywords",
+                  "sexual stigma and transmission routes",
+                  "racial disparities and stigmatising name",
+                  "global relations",
+                  "public health failure",
+                  "epidemic preparedness and surveillance",
+                  "human-interest stories",
+                  "broader health issues"
+                  )
+framing_list <- lapply(framing_list, format_columns, keep_columns = keep_columns)
+
+save(framing_list, file = "Labelled/Framing_test.RData")
+```
+
+## Evaluate
+
+Calculate how different annotators performed on the relevance coding task with respect to each other on the test set.
+
+```{r}
+A1 <- "a1_r2" #annotator 1
+A2 <- "deberta" #annotator 2
+
+column_match <- "stories_id" #column used to track the annotation file IDs
+
+frames <- c("sexual stigma and transmission routes",
+            "racial disparities and stigmatising name",
+            "global relations",
+            "public health failure",
+            "epidemic preparedness and surveillance",
+            "human-interest stories",
+            "broader health issues")
+
+
+for(f in frames)
+{
+  print(f)
+  calculate_scores(framing_list, A1, A2, column_A1 = f, column_A2 = f)
+}
+
+```
+
+### 

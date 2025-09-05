@@ -1,0 +1,75 @@
+[
+  {
+    "task": "Mpox Relevance Coding",
+    "objective": "Determine if an article is relevant to the Mpox epidemic of 2022",
+    "question": "Is the article relevant to the Mpox epidemic of 2022?",
+    "response_options": [
+      {
+        "code": 0,
+        "label": "Irrelevant"
+      },
+      {
+        "code": 1,
+        "label": "Relevant"
+      }
+    ],
+    "coding_criteria": {
+      "relevant_definition": "An article is marked Relevant (1) if it contains explicit content directly discussing Mpox in relation to the human epidemic context.",
+      "irrelevant_definition": "An article is marked Irrelevant (0) if it does not substantively discuss Mpox in a way related to the epidemic, or mentions it only in passing, satirical, or non-human contexts.",
+      "inclusion_criteria": [
+        "Mpox case counts, geographic spread, infection rates",
+        "Mpox transmission patterns, e.g., discussion of how it spreads between people",
+        "Information about Mpox vaccines, availability, development, distribution",
+        "Identification or discussion of at-risk groups (e.g., MSM, immunocompromised individuals, anyone who engages in close contact with a patient)",
+        "Descriptions/critiques of the public health response (e.g., health advisories, CDC/WHO statements, local health campaigns)",
+        "Details about epidemiological characteristics of Mpox (e.g., symptoms, strains, zoonotic origins when tied to the outbreak)",
+        "Discussion of media coverage or representation of Mpox in the news or public discourse",
+        "Government policy, funding, or international efforts directly targeting Mpox",
+        "Personal stories about people dealing with Mpox/stigma due to Mpox"
+      ],
+      "exclusion_criteria": [
+        {
+          "category": "Incomplete Scrapes",
+          "description": "Article is cut off mid-sentence or has only a headline or metadata. (Keep articles where they're cut off from a paragraph or so, leaving the scraped data still coherent, no need to cross check with links)"
+        },
+        {
+          "category": "Non-English articles",
+          "description": "Articles not written in English"
+        },
+        {
+          "category": "Briefings/Quick Hits/Highlight Memos",
+          "description": "Summarized, non-substantive listings with no in-depth coverage. E.g., 'Top 5 health stories today: flu, Mpox, RSV...'"
+        },
+        {
+          "category": "General Discussion of Public Health/Diseases/Vaccines",
+          "description": "Mpox only mentioned as one of many diseases in a broad context. E.g., 'Vaccination efforts continue for diseases such as flu, Mpox, and measles.'"
+        },
+        {
+          "category": "Satirical or Throwaway Mentions",
+          "description": "Mpox used as a joke, stereotype, or stigmatizing punchline. E.g., 'Avoid gay men or you'll get Mpox --- just kidding, but be careful!'"
+        },
+        {
+          "category": "Animal/Primate/Zoonotic Research (without human epidemic connection)",
+          "description": "Mpox mentioned in the context of animal studies or general zoonoses. E.g., 'Study finds new poxvirus in African rodents; Mpox cited as historical example.'"
+        },
+        {
+          "category": "Hyperlinked References Only",
+          "description": "Mpox is only mentioned in a hyperlink or suggested reading, not in the body. E.g., '...a variety of poxviruses [read more here].'"
+        },
+        {
+          "category": "General LGBTQ+ Issue Coverage",
+          "description": "Mpox name-dropped in a list of issues affecting the queer community but not discussed. E.g., 'From mental health to Mpox, queer health is under threat.'"
+        }
+      ]
+    },
+    "coding_guidelines": [
+      "If it's unclear whether the article is relevant, lean toward exclusion and mark it irrelevant",
+      "If an article contains some irrelevant framing (e.g., satire, general disease mentions) but also includes relevant details (case counts, public health response, etc.), mark as Relevant",
+      "If zoonotic origins or animal vectors are discussed with direct connection to the current human outbreak, mark Relevant",
+      "Focus on explicit content --- assume implicit relevance (e.g., inferred risk or allusion) is not sufficient",
+      "One or more inclusion criteria must apply explicitly for an article to be marked Relevant",
+      "If any exclusion criteria applies and none of the inclusion criteria applies, mark as Irrelevant"
+    ],
+    "instructions": "Read the article carefully and determine if it meets the criteria for relevance to the Mpox epidemic of 2022. Apply the inclusion and exclusion criteria systematically, and when in doubt, err on the side of marking as irrelevant."
+  }
+]

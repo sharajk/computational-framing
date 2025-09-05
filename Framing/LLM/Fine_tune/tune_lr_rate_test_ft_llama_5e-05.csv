@@ -1,0 +1,9 @@
+,Accuracy,Kappa,F1
+sexual stigma and transmission routes,70.103,0.434,0.701
+racial disparities and stigmatising name,95.876,0.81,0.833
+global relations,55.67,0.06,0.218
+public health failure,80.412,0.521,0.642
+epidemic preparedness and surveillance,47.423,0.116,0.514
+human-interest stories,77.32,0.358,0.45
+broader health issues,62.887,0.253,0.471
+mean,69.956,0.365,0.547

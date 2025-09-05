@@ -1,0 +1,6 @@
+,llama3.1:8bzshot_withCB.csv,llama3.1:8bzshot_noCB.csv,gpt-oss-20b-zshot_withCB.csv,claude-sonnet-4-20250514_zshot_withCB.csv,llama3.1:8b_ft.csv
+Accuracy,0.92,0.93,0.92,0.95,0.95
+F1,0.94,0.95,0.94,0.96,0.96
+Precision,0.94,0.94,0.91,0.94,0.95
+Recall,0.95,0.96,0.97,0.99,0.98
+Kappa,0.81,0.84,0.8,0.88,0.89

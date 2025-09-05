@@ -1,0 +1,12 @@
+,sexual stigma and transmission routes,racial disparities and stigmatising name,global relations,public health failure,epidemic preparedness and surveillance,human-interest stories,broader health issues
+llama3.1:8b-instruct-q8_0_human_judge.csv,69.388,95.918,71.429,81.633,58.163,76.531,72.449
+claude-sonnet-4-20250514_zshot_1to1.csv,72.0,98.0,91.0,84.0,65.0,97.0,70.0
+gpt-oss-20b-zshot.csv,74.227,96.907,73.196,86.598,64.948,94.845,72.165
+llama3.1:8b-instruct-q8_0_zshot.csv,70.0,95.0,69.0,84.0,51.0,72.0,73.0
+llama3.1:8b-instruct-q8_0_zshot_1to1.csv,69.697,93.939,80.808,87.879,67.677,90.909,76.0
+llama3.1:8b-instruct-q8_0_ft.csv,72.0,98.0,68.0,85.0,51.0,77.0,74.0
+llama3.1:8b-instruct-q8_0_confidence.csv,69.0,92.0,79.0,90.0,67.0,91.0,70.0
+claude-sonnet-4-20250514_zshot.csv,72.0,99.0,92.0,89.0,77.0,98.0,83.0
+llama3.1:8b-instruct-q8_0_decision_tree.csv,50.0,95.0,25.0,66.0,36.0,93.0,72.0
+llama3.1:8b-instruct-q8_0_ft_1to1.csv,68.687,92.929,80.808,87.879,74.747,92.929,75.758
+llama3.1:8b-instruct-q8_0_LLM_judge.csv,64.646,96.97,44.444,74.747,34.343,74.747,31.313

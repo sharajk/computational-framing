@@ -1,0 +1,332 @@
+[
+  {
+    "index": "a1a",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "problem definition",
+    "question": "does it address that mpox is disproportionately affecting the queer community?"
+  },
+  {
+    "index": "a1b",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "problem definition",
+    "question": "does it debate or discuss debates of whether mpox is a sexually transmitted infection?"
+  },
+  {
+    "index": "a1c",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "problem definition",
+    "question": "does it strictly emphasize that mpox could affect anyone irrespective of their sexuality?"
+  },
+  {
+    "index": "a2a",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "causal interpretation",
+    "question": "does it attribute the mpox epidemic to sexual activity within msm communities?"
+  },
+  {
+    "index": "a2b",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "causal interpretation",
+    "question": "does it attribute mpox concentration in msm communities to social network effects?"
+  },
+  {
+    "index": "a2c",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "causal interpretation",
+    "question": "does it deliberate on whether mpox spreads sexually or via close contact?"
+  },
+  {
+    "index": "a3a",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "moral evaluation",
+    "question": "does it emphasize avoiding stigma against queer communities?"
+  },
+  {
+    "index": "a3b",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "moral evaluation",
+    "question": "does it make moral judgement about the sexuality and lifestyle choice of queer communities?"
+  },
+  {
+    "index": "a3c",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "moral evaluation",
+    "question": "does it attribute concerns about sexual stigma to wokeness/political correctness?"
+  },
+  {
+    "index": "a4a",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for stigma-informed public health messaging?"
+  },
+  {
+    "index": "a4b",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for abstinence/reduction of sexual partners within queer communities?"
+  },
+  {
+    "index": "a4c",
+    "frame": "sexual stigma and transmission routes",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for messaging that clarifies that heterosexual individuals are not a risk-group for mpox?"
+  },
+  {
+    "index": "b1a",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "problem definition",
+    "question": "does it identify racial disparities in mpox disease demographics, vaccine access or mpox treatment?"
+  },
+  {
+    "index": "b1b",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "problem definition",
+    "question": "does it debate whether the name \"monkeypox\" is racially stigmatising?"
+  },
+  {
+    "index": "b2a",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "causal interpretation",
+    "question": "does it attribute the failure of public health response to the mpox epidemic to systemic health barriers and historical neglect of communities of color?"
+  },
+  {
+    "index": "b3a",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "moral evaluation",
+    "question": "does it present racial equity in public health as a moral imperative?"
+  },
+  {
+    "index": "b3b",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "moral evaluation",
+    "question": "does it consider concerns about racial barriers to mpox public health response to political correctness or 'wokeness'?"
+  },
+  {
+    "index": "b3c",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "moral evaluation",
+    "question": "does it consider concerns about the racially stigmatising nature of the name \"monkeypox\" as excessive or politically motivated?"
+  },
+  {
+    "index": "b4a",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for racially equitable distribution of vaccines and mpox treatments?"
+  },
+  {
+    "index": "b4b",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for renaming the virus \"monkeypox\" based on racial concerns?"
+  },
+  {
+    "index": "b4c",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "treatment recommendation",
+    "question": "does it explicitly advocate for \"color-blind\" approaches to mpox that are independent of race?"
+  },
+  {
+    "index": "b4d",
+    "frame": "racial disparities and stigmatising name",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate against renaming the virus \"monkeypox\"?"
+  },
+  {
+    "index": "c1a",
+    "frame": "global relations",
+    "dimension": "problem definition",
+    "question": "does it define mpox as a global health challenge?"
+  },
+  {
+    "index": "c1b",
+    "frame": "global relations",
+    "dimension": "problem definition",
+    "question": "does it define mpox as strictly an internal affairs issue for the us?"
+  },
+  {
+    "index": "c2a",
+    "frame": "global relations",
+    "dimension": "causal interpretation",
+    "question": "does it attribute the epidemic to the failure of wealthy western nations to help countries where mpox is endemic?"
+  },
+  {
+    "index": "c2b",
+    "frame": "global relations",
+    "dimension": "causal interpretation",
+    "question": "does it attribute the epidemic to the failure of healthcare systems or unhygeinic lifestyles in countries where mpox is endemic?"
+  },
+  {
+    "index": "c3a",
+    "frame": "global relations",
+    "dimension": "moral evaluation",
+    "question": "does it condemn the colonial legacies of western nations?"
+  },
+  {
+    "index": "c3b",
+    "frame": "global relations",
+    "dimension": "moral evaluation",
+    "question": "does it prioritize national security and citizen protection as a moral imperative?"
+  },
+  {
+    "index": "c4a",
+    "frame": "global relations",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for a globalist position/coordinated international response to mpox?"
+  },
+  {
+    "index": "c4b",
+    "frame": "global relations",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for an isolationist position/domestic priority in response to mpox?"
+  },
+  {
+    "index": "d1a",
+    "frame": "public health failure",
+    "dimension": "problem definition",
+    "question": "does it criticize the public health response as slow/inadequate?"
+  },
+  {
+    "index": "d1b",
+    "frame": "public health failure",
+    "dimension": "problem definition",
+    "question": "does it highlight challenges faced by mpox patients in accessing healthcare?"
+  },
+  {
+    "index": "d1c",
+    "frame": "public health failure",
+    "dimension": "problem definition",
+    "question": "does it highlight a lack of public health infrastructure to deal with the mpox epidemic?"
+  },
+  {
+    "index": "d2a",
+    "frame": "public health failure",
+    "dimension": "causal interpretation",
+    "question": "does it attribute disease control challenges to institutional incompetence?"
+  },
+  {
+    "index": "d2b",
+    "frame": "public health failure",
+    "dimension": "causal interpretation",
+    "question": "does it implicate popular public health officials such as fauci, walensky, daskalakis etc.?"
+  },
+  {
+    "index": "e1a",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "moral evaluation",
+    "question": "does it place trust in public health institutions to effectively handle the mpox epidemic?"
+  },
+  {
+    "index": "e1b",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "moral evaluation",
+    "question": "does it view interventions by public health institutions as necessary to curb the mpox epidemic?"
+  },
+  {
+    "index": "e1c",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "moral evaluation",
+    "question": "does it present public health institutions as overreaching and untrustworthy when it comes to mpox?"
+  },
+  {
+    "index": "e1d",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "moral evaluation",
+    "question": "does it emphasize on individual liberty and freedom against public health interventions?"
+  },
+  {
+    "index": "e2a",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "treatment recommendation",
+    "question": "does it recommend declaring public health emergencies in response to mpox?"
+  },
+  {
+    "index": "e2b",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for increased surveillance and pro-active responses to the mpox epidemic?"
+  },
+  {
+    "index": "e2c",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for more funding towards the mpox public health response?"
+  },
+  {
+    "index": "e2d",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate against declaring public health emergencies in response to mpox?"
+  },
+  {
+    "index": "e2e",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate against increased surveillance and pro-active responses to the mpox epidemic?"
+  },
+  {
+    "index": "e2f",
+    "frame": "epidemic preparedness and surveillance",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate against increased funding towards the mpox public health response?"
+  },
+  {
+    "index": "f1a",
+    "frame": "human-interest stories",
+    "dimension": "problem definition",
+    "question": "does it present personal anecdotes and episodic narratives from the individuals/communities affected by the mpox epidemic?"
+  },
+  {
+    "index": "g1a",
+    "frame": "broader health issues",
+    "dimension": "problem definition",
+    "question": "does it make a significant deviation (more than brief mentions) from mpox to other health issues, e.g., covid-19, smallpox, hiv/aids etc.?"
+  },
+  {
+    "index": "g1b",
+    "frame": "broader health issues",
+    "dimension": "problem definition",
+    "question": "does it make a broader thematic point about the lack of infrastructure in the us to handle public health crises?"
+  },
+  {
+    "index": "g1c",
+    "frame": "broader health issues",
+    "dimension": "problem definition",
+    "question": "does it make a broader thematic point about sensationalism and ineffectiveness of interventions during public health crises?"
+  },
+  {
+    "index": "g2a",
+    "frame": "broader health issues",
+    "dimension": "causal interpretation",
+    "question": "does it attribute general (not just mpox) disease threats to broader structural issues such as climate change, global health inequity etc.?"
+  },
+  {
+    "index": "g2b",
+    "frame": "broader health issues",
+    "dimension": "causal interpretation",
+    "question": "does it attribute general (not just mpox) disease handling failures to pro-establishment and overreaching tactics of public health institutions?"
+  },
+  {
+    "index": "g3a",
+    "frame": "broader health issues",
+    "dimension": "moral evaluation",
+    "question": "does it emphasize on collective responsibility and moral imperative to handle future disease threats with care?"
+  },
+  {
+    "index": "g3b",
+    "frame": "broader health issues",
+    "dimension": "moral evaluation",
+    "question": "does it present public health institutions as overreaching and untrustworthy when it comes to future disease threats?"
+  },
+  {
+    "index": "g4a",
+    "frame": "broader health issues",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for strengthened infrastructure and increased funding for public health as a whole?"
+  },
+  {
+    "index": "g4b",
+    "frame": "broader health issues",
+    "dimension": "treatment recommendation",
+    "question": "does it advocate for pragmatic management of diseases in general instead of system-wide reforms?"
+  }
+]

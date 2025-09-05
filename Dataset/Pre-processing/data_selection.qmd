@@ -1,0 +1,72 @@
+---
+title: "Data selection"
+author: "Sharaj"
+format: html
+editor: visual
+---
+
+Code to cleanup and select articles the raw dataframe for downstream annotation procedures and analysis
+
+## Load libraries and dataframe
+
+```{r}
+library(stringr)
+
+news <- read.csv("Dataset/Raw/newspaper_raw.csv")
+```
+
+## Cleanup
+
+Here, articles were chosen for further analysis through the following steps:
+
+1.  Articles that could not be scraped from newspaper4k were excluded.
+2.  Articles that had fewer than 250 words were excluded.
+3.  Article texts that didn't contain the term "monkeypox" or "mpox" were excluded.
+4.  Articles that contained terms like "associated press", "wired" or "reuters" were removed to maximize diversity in the corpus and remove syndicated texts.
+5.  Articles that contain more characters than the excel cell limit (32767) are excluded.
+
+```{r}
+#remove articles that we could not scrape
+full <- which(news$text != "")
+news_df <- news[full,]
+
+#word count
+word_count <- unlist(lapply(1:length(news_df$text), function(i) {
+  str_count(news_df$text[i], '\\w+')
+}))
+
+#what is the head of the distribution
+quantile(word_count, 0.1) #240
+
+#mention of mpox or monkeypox
+mpox_count <- unlist(lapply(1:length(news_df$text), function(i) {
+  str_count(tolower(news_df$text[i]), 'monkeypox') + 
+    str_count(tolower(news_df$text[i]), 'mpox')
+}))
+
+#mention of the associated press, reuters or wired
+press_count <- unlist(lapply(1:length(news_df$text), function(i) {
+  str_count(tolower(news_df$text[i]), 'associated press') + 
+    str_count(tolower(news_df$text[i]), 'reuters') +
+    str_count(tolower(news_df$text[i]), 'wired')
+}))
+
+#number of characters
+char_count <- unlist(lapply(1:length(news_df$text), function(i) {
+  nchar(tolower(news_df$text[i]))
+}))
+
+#exclusion criteria: 
+keep <-  which((mpox_count>0)&(word_count>250)&(press_count==0)&(char_count<32767))
+
+#choose certain columns
+df1 <- news_df[keep,c("stories_id","media_name",
+                      "title","url","text","author","keywords")]
+
+df1 <- df1[order(df1$stories_id),]
+rownames(df1) <- c(1:nrow(df1))
+
+write.csv(df1, "Dataset/Pre-processing/mpox_news_data.csv", row.names = F)
+
+
+```

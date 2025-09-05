@@ -1,0 +1,12 @@
+,sexual stigma and transmission routes,racial disparities and stigmatising name,global relations,public health failure,epidemic preparedness and surveillance,human-interest stories,broader health issues
+llama3.1:8b-instruct-q8_0_human_judge.csv,0.919,0.833,0.8,0.895,0.871,1.0,0.81
+claude-sonnet-4-20250514_zshot_1to1.csv,0.974,0.917,0.6,0.947,1.0,0.889,0.905
+gpt-oss-20b-zshot.csv,0.944,0.833,0.875,1.0,0.862,1.0,0.65
+llama3.1:8b-instruct-q8_0_zshot.csv,0.895,0.917,0.8,0.895,0.742,0.889,0.81
+llama3.1:8b-instruct-q8_0_zshot_1to1.csv,0.921,0.917,0.5,0.789,0.806,0.333,0.857
+llama3.1:8b-instruct-q8_0_ft.csv,0.895,1.0,0.8,0.895,0.742,1.0,0.857
+llama3.1:8b-instruct-q8_0_confidence.csv,0.711,0.75,0.5,0.842,0.581,0.333,0.619
+claude-sonnet-4-20250514_zshot.csv,0.947,1.0,0.5,0.842,0.484,0.889,0.667
+llama3.1:8b-instruct-q8_0_decision_tree.csv,0.974,0.75,1.0,1.0,1.0,0.778,0.81
+llama3.1:8b-instruct-q8_0_ft_1to1.csv,0.947,0.917,0.5,0.789,0.806,0.333,0.857
+llama3.1:8b-instruct-q8_0_LLM_judge.csv,0.895,1.0,1.0,0.947,1.0,1.0,0.95

@@ -1,0 +1,9 @@
+,Frequency,Accuracy,Kappa,F1,Precision,Recall
+sexual stigma and transmission routes,38,69.0,0.371,0.635,0.574,0.711
+racial disparities and stigmatising name,12,92.0,0.647,0.692,0.643,0.75
+global relations,10,79.0,0.216,0.323,0.238,0.5
+public health failure,19,90.0,0.699,0.762,0.696,0.842
+epidemic preparedness and surveillance,31,67.0,0.274,0.522,0.474,0.581
+human-interest stories,9,91.0,0.353,0.4,0.5,0.333
+broader health issues,21,70.0,0.274,0.464,0.371,0.619
+mean,20.0,79.714,0.405,0.543,0.499,0.619
