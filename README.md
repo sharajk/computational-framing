@@ -11,8 +11,8 @@ Sharaj Kunjar\*, Alyssa Hasegawa Smith, Tyler R Mckenzie, Rushali Mohbe, Samuel 
 
 ### Packages used
 
-**R:** stringr,
+**R:** stringr, readr, dplyr, irr, Metrics, kableExtra, snakecase
 
-**Python:** pandas, numpy, newspaper4k, networkx, collections, json, pickle, matplotlib,
+**Python:** pandas, numpy, newspaper4k, networkx, collections, json, pickle, matplotlib, sklearn, os, re, anthropic, time, typing, torch, transformers, ollama, pathlib,yaml, datasets, evaluate, nltk, glob, sentence_transformers
 
 # Structure of the Repository
