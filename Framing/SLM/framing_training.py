@@ -31,8 +31,8 @@ try:
 except FileExistsError as e:
     print(e)
 
-df_frames_test = pd.read_csv('/projects/netsi/smith.alyss/Framing_Mpox/Data/Annotated/100_articles_labelled_frames.csv')
-df_frames_train = pd.read_csv('/projects/netsi/smith.alyss/Framing_Mpox/Data/Annotated/400_articles_labelled_frames.csv')
+df_frames_test = pd.read_csv('labelled_frames_test.csv')
+df_frames_train = pd.read_csv('labelled_frames_train.csv')
 
 gc.collect()
 torch.cuda.empty_cache()

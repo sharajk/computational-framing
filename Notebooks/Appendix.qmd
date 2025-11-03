@@ -1243,13 +1243,13 @@ frames <- c("sexual stigma and transmission routes",
             "human-interest stories",
             "broader health issues")
 
-models <- c("llama_zero-shot","llama_ft","claude_zero-shot","gpt-oss_zero-shot")
+models <- c("llama_zero-shot","llama_ft","gpt-oss_zero-shot", "claude_zero-shot")
 
 #turn to named list for caption
 names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) zero-shot",
                    "Llama 3.1-8B-Instruct (8-bit quantized) fine-tuned",
-                   "Claude Sonnet 4 zero-shot",
-                   "GPT-OSS-20B zero-shot")
+                   "GPT-OSS-20B zero-shot",
+                   "Claude Sonnet 4 zero-shot")
 
 #create tables for each model metrics
 for(m in models)
