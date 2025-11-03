@@ -201,14 +201,14 @@ framing_list <- list(
   "deberta" = read.csv("Framing/SLM/deberta_test.csv", check.names = F),
 
   #Large language models (post 2023)
-  "llama_zero-shot" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_zshot_1to1.csv", check.names = F),
-  "llama_ft" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_ft_1to1.csv", check.names = F),
-  "llama_llm_judge" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_LLM_judge.csv", check.names = F),
-  "llama_human_feedback" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_human_judge.csv", check.names = F),
-  "llama_decision" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_decision_tree.csv", check.names = F),
-  "llama_confidence" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_confidence.csv", check.names = F),
-  "claude_zero-shot" = read.csv("Framing/LLM/Predicted/claude-sonnet-4-20250514_zshot.csv", check.names = F),
-  "gpt-oss_zero-shot" = read.csv("Framing/LLM/Predicted/gpt-oss-20b-zshot.csv", check.names = F)
+  "llama_zero-shot" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_zshot_1to1.csv", check.names = F),
+  "llama_ft" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_ft_1to1.csv", check.names = F),
+  "llama_llm_judge" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_LLM_judge.csv", check.names = F),
+  "llama_human_feedback" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_human_judge.csv", check.names = F),
+  "llama_decision" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_decision_tree.csv", check.names = F),
+  "llama_confidence" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_confidence.csv", check.names = F),
+  "claude_zero-shot" = read.csv("Framing/LLM/Predicted/Test/claude-sonnet-4-20250514_zshot.csv", check.names = F),
+  "gpt-oss_zero-shot" = read.csv("Framing/LLM/Predicted/Test/gpt-oss-20b-zshot.csv", check.names = F)
 )
 
 keep_columns <- c("stories_id","media_name", "title","url","text","keywords",
