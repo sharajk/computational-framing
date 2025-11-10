@@ -23,7 +23,7 @@ Sharaj Kunjar\*, Alyssa Hasegawa Smith, Tyler R Mckenzie, Rushali Mohbe, Samuel 
 
 Contains datasets prior to any form of analysis.
 
-### Raw 
+### Raw
 
 1.  mediacloud_raw.csv: the list of all urls pertaining to news articles that talk about monkeypox within our timeline, as obtained from mediacloud
 2.  webscrape_articles.ipynb: code to use the above dataset and newspaper4k to webscrape the texts for the articles
