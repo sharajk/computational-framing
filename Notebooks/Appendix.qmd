@@ -205,7 +205,7 @@ An article is marked *Irrelevant* if it does not substantively discuss Mpox 
 -   Focus on explicit content — assume implicit relevance (e.g., inferred risk or allusion) is not sufficient.
 :::
 
-### Non-generative language models
+### Discriminative language models
 
 \[ALYSSA\] - verify text and code in `Relevance/SLM/`
 
@@ -251,7 +251,7 @@ The first and the third authors of the paper performed applied thematic analysis
 
 Further details on the procedure invoked to develop the codebook will be elucidated in later work (Kunjar, forthcoming).
 
-### Non-generative language models
+### Discriminative language models
 
 \[ALYSSA/TYLER\] - insert how topic models were made. Also modify code in `Codebook/SLM/`
 
@@ -315,11 +315,11 @@ The first and the third authors performed a codebook-assisted annotation procedu
 
 -   The first then proceeded to annotate an additional subset of 400 articles for training language models in the subsequent analysis.
 
-### Non-generative language models
+### Discriminative language models
 
 \[ALYSSA\] - upload code, verify text
 
-Here, we used the same 3 non-generative language models - Naïve Bayes, BERT-base-cased and DeBERTa-v3-base to perform frame detection (using the same computing resources) as mentioned in the relevance coding section. All the models were trained on the labels produced by the first author on 400 articles (60/40 train/eval split), and tested on the 100 articles that were doubly annotated by both manual annotators.
+Here, we used the same 3 discriminative language models - Naïve Bayes, BERT-base-cased and DeBERTa-v3-base to perform frame detection (using the same computing resources) as mentioned in the relevance coding section. All the models were trained on the labels produced by the first author on 400 articles (60/40 train/eval split), and tested on the 100 articles that were doubly annotated by both manual annotators.
 
 ### Generative large language models
 
@@ -852,7 +852,7 @@ After following the standard six-phase thematic analytical procedure [@byrne2022
 -   **When not to use:** Articles focusing strictly on Mpox; brief mentions of other diseases without substantive connections.
 :::
 
-### Non-generative language models
+### Discriminative language models
 
 ::: {.callout-tip icon="false"}
 ##### BERT based topics
@@ -1158,7 +1158,7 @@ knitr::kable(dfr, align = 'c', escape = F,
 
 ```
 
-### Non-generative language models
+### Discriminative language models
 
 ```{r}
 #| echo: false
@@ -1243,13 +1243,13 @@ frames <- c("sexual stigma and transmission routes",
             "human-interest stories",
             "broader health issues")
 
-models <- c("llama_zero-shot","llama_ft","claude_zero-shot","gpt-oss_zero-shot")
+models <- c("llama_zero-shot","llama_ft","gpt-oss_zero-shot", "claude_zero-shot")
 
 #turn to named list for caption
 names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) zero-shot",
                    "Llama 3.1-8B-Instruct (8-bit quantized) fine-tuned",
-                   "Claude Sonnet 4 zero-shot",
-                   "GPT-OSS-20B zero-shot")
+                   "GPT-OSS-20B zero-shot",
+                   "Claude Sonnet 4 zero-shot")
 
 #create tables for each model metrics
 for(m in models)

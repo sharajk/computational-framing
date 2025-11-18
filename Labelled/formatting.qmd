@@ -182,7 +182,6 @@ Annotations available:
 11. Llama-3.1-8B-Instruct (8-bit quantized) with confidence scores
 12. Claude Sonnet 4
 13. GPT-OSS-20B
-14. Ensemble classifier
 
 ```{r}
 #create a list of dataframes
@@ -196,19 +195,19 @@ framing_list <- list(
   "a2_r2" = read.csv("Framing/Human/A2_r2.csv", check.names = F),
   
   #Smaller language models
-  "naive_bayes" = read.csv("Framing/SLM/naive_bayes_test.csv", check.names = F),
-  "bert" = read.csv("Framing/SLM/bert_test.csv", check.names = F),
-  "deberta" = read.csv("Framing/SLM/deberta_test.csv", check.names = F),
+  "naive_bayes" = read.csv("Framing/SLM/Predicted/Test/naive_bayes_test.csv", check.names = F),
+  "bert" = read.csv("Framing/SLM/Predicted/Test/bert_test.csv", check.names = F),
+  "deberta" = read.csv("Framing/SLM/Predicted/Test/deberta_test.csv", check.names = F),
 
   #Large language models (post 2023)
-  "llama_zero-shot" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_zshot_1to1.csv", check.names = F),
-  "llama_ft" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_ft_1to1.csv", check.names = F),
-  "llama_llm_judge" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_LLM_judge.csv", check.names = F),
-  "llama_human_feedback" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_human_judge.csv", check.names = F),
-  "llama_decision" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_decision_tree.csv", check.names = F),
-  "llama_confidence" = read.csv("Framing/LLM/Predicted/llama3.1:8b-instruct-q8_0_confidence.csv", check.names = F),
-  "claude_zero-shot" = read.csv("Framing/LLM/Predicted/claude-sonnet-4-20250514_zshot.csv", check.names = F),
-  "gpt-oss_zero-shot" = read.csv("Framing/LLM/Predicted/gpt-oss-20b-zshot.csv", check.names = F)
+  "llama_zero-shot" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_zshot_1to1.csv", check.names = F),
+  "llama_ft" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_ft_1to1.csv", check.names = F),
+  "llama_llm_judge" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_LLM_judge.csv", check.names = F),
+  "llama_human_feedback" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_human_judge.csv", check.names = F),
+  "llama_decision" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_decision_tree.csv", check.names = F),
+  "llama_confidence" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_confidence.csv", check.names = F),
+  "claude_zero-shot" = read.csv("Framing/LLM/Predicted/Test/claude-sonnet-4-20250514_zshot.csv", check.names = F),
+  "gpt-oss_zero-shot" = read.csv("Framing/LLM/Predicted/Test/gpt-oss-20b-zshot.csv", check.names = F)
 )
 
 keep_columns <- c("stories_id","media_name", "title","url","text","keywords",
@@ -230,8 +229,8 @@ save(framing_list, file = "Labelled/Framing_test.RData")
 Calculate how different annotators performed on the relevance coding task with respect to each other on the test set.
 
 ```{r}
-A1 <- "a1_r2" #annotator 1
-A2 <- "deberta" #annotator 2
+A1 <- "A1" #annotator 1
+A2 <- "claude_zero-shot" #annotator 2
 
 column_match <- "stories_id" #column used to track the annotation file IDs
 
@@ -247,9 +246,54 @@ frames <- c("sexual stigma and transmission routes",
 for(f in frames)
 {
   print(f)
-  calculate_scores(framing_list, A1, A2, column_A1 = f, column_A2 = f)
+  calculate_scores(framing_list, A1, A2, column_A1 = f, column_A2 = f, silent = F)
 }
 
 ```
 
-### 
+## Extrapolate
+
+Compile all available annotations articles:
+
+Annotations available:
+
+1.  First author (A1) manual annotations for 500 articles
+2.  Third author (A2) manual annotations for 100 articles
+3.  Naive Bayes for 2221 articles
+4.  BERT large cased for 2221 articles
+5.  DeBERTa-v3-small for 2221 articles
+6.  Claude Sonnet 4 for 2224 articles
+
+```{r}
+#create a list of dataframes
+framing_list <- list(
+  #First author
+  "A1" = rbind(read.csv("Framing/Human/A1_r2.csv", check.names = F), read.csv("Framing/Human/A1_train.csv", check.names = F)),
+  
+  #Second author
+  "A2" = read.csv("Framing/Human/A2_r2.csv", check.names = F),
+  
+  #Smaller language models
+  "naive_bayes" = read.csv("Framing/SLM/Predicted/All/nb_all.csv", check.names = F),
+  "bert" = read.csv("Framing/SLM/Predicted/All/bert_all.csv", check.names = F),
+  "deberta" = read.csv("Framing/SLM/Predicted/All/deberta_all.csv", check.names = F),
+
+  #Large language models (post 2023)
+  "llama_zero-shot" = read.csv("Framing/LLM/Predicted/All/llama3.1:8b-instruct-q8_0_zshot_all.csv", check.names = F),
+  "claude_zero-shot" = read.csv("Framing/LLM/Predicted/All/claude-sonnet-4-20250514_zshot_all.csv", check.names = F)
+)
+
+keep_columns <- c("stories_id","media_name", "title","url","text","keywords",
+                  "sexual stigma and transmission routes",
+                  "racial disparities and stigmatising name",
+                  "global relations",
+                  "public health failure",
+                  "epidemic preparedness and surveillance",
+                  "human-interest stories",
+                  "broader health issues"
+                  )
+
+framing_list <- lapply(framing_list, format_columns, keep_columns = keep_columns)
+
+save(framing_list, file = "Labelled/Framing_all.RData")
+```
