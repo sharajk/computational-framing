@@ -128,7 +128,9 @@ Files for frame detection with discriminative (BoW or encoder-only) models: Naiv
 3.  config.yml: set global parameters
 4.  classifiers.py: code to initialize and setup the model
 5.  framing_training.py: code to run the models and detect frames
-6.  {naive_bayes, bert, deberta}\_test.csv: labels for frame presence on the test set of 100 articles for different classifiers
+6.  Predicted:
+    1.  Test: contains labels for frame presence on the test set of 100 articles for different classifiers
+    2.  All: contains labels for frame presence on the full set of 2224 articles for different classifiers
 
 ### LLM
 
@@ -148,7 +150,7 @@ Files for frame detection with generative (decoder-only) large language models: 
 
     -   Fine_tune: contains additional files to fine tune llama models in framing_llama
 
-    -   Predicted: contains all the annotated files
+    -   Predicted: contains all the annotated files ('Test' contains labels for 100 articles from the test set, and 'All' contains labels for all the 2224 relevant articles)
 
     -   Scores: contains files with the performance metrics for all the models
 
@@ -159,7 +161,8 @@ Contains all the labelled files post analysis.
 1.  formatting.qmd: code to format and collate all the annotations.
 2.  relevance_all.csv: file containing relevance labels for all the pre-processed articles annotated by BERT
 3.  Relevance_test.RData: file containing relevance labels for the test set of 500 articles.
-4.  Framing_test.RData: file containing labels for frame detection labels for the test set of 100 articles.
+4.  Framing_test.RData: file containing labels for frame detection for the test set of 100 articles.
+5.  Framing_all.RData: file containing labels for frame detection for the entire dataset of 2224 relevant articles.
 
 ## Notebooks
 
