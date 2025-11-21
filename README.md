@@ -131,6 +131,7 @@ Files for frame detection with discriminative (BoW or encoder-only) models: Naiv
 6.  Predicted:
     1.  Test: contains labels for frame presence on the test set of 100 articles for different classifiers
     2.  All: contains labels for frame presence on the full set of 2224 articles for different classifiers
+7.  Class_imbalance: folder contains code and predictions resulting from performing class imbalance management (with focal loss) for all the models.
 
 ### LLM
 
