@@ -18,7 +18,7 @@ format:
     include-in-header:
       text: |
         % change margin spacings
-        \usepackage[a4paper,margin=1in,footskip=20pt]{geometry}
+        \usepackage[letterpaper,margin=1in,footskip=20pt]{geometry}
         % set table numbering
         \renewcommand{\thetable}{A\arabic{table}} 
         % set figure numbering
@@ -73,8 +73,6 @@ Here, articles were chosen for further analysis through the following steps:
 
 ### Deduplication
 
-\[ALYSSA\] - verify text and code in `Dataset/Pre-processing`
-
 Many articles are copy-pasted by the same outlet on different days or similar outlets. These articles should be included only once in the manual annotation stage to maximize variation within annotated articles.
 
 We constructed a graph where nodes were articles and two articles A and B were connected by a directed edge (A, B) whose weight was equal to the fraction of words in A that were also seen in B. So if one article is "Whales are very cool and dolphins are also great" and the other article is "I think whales are great and they are also large", the edge weights would be 6/9 and 6/10 (from A to B and B to A) ("whales", "are", "and", "are", "also", "great").
@@ -84,8 +82,6 @@ Then we pruned the graph to only include edges whose weight was greater than or 
 We used the dataset with 95% threshold for assigning articles for manual annotation and training language models. Towards the end, when we are predicting annotations over articles that haven't been annotated, these deduplicated articles will be kept in the test set.
 
 ### Boiler-plate removal
-
-\[ALYSSA\] - verify text and code in `Dataset/Pre-processing`
 
 A lot of articles contain boiler plate texts (advertisements, information about the author, highlights/key takeaways etc.) that aren't relevant to the article's content. These texts need to be removed in order to optimise the language models.
 
@@ -97,7 +93,7 @@ After collection preprocessing, the curated dataset contains 3314 articles from 
 
 # Methods
 
-## Relevance coding
+## Relevance classification
 
 Since our data collection was based on string matching for the term "monkeypox" or "mpox", our current dataset contains articles that could be about other issues, but only briefly mention mpox. Hence at this stage, we further processed articles to restrict our analysis to articles that were actually about Mpox. To this end, first, we perform a codebook-assisted qualitative analysis, as follows.
 
@@ -207,8 +203,6 @@ An article is marked *Irrelevant* if it does not substantively discuss Mpox 
 
 ### Discriminative language models
 
-\[ALYSSA\] - verify text and code in `Relevance/SLM/`
-
 In this section, we evaluated two transformer-based models, deberta-v3-base [@he] and bert-base-cased [@devlin], as well as a Naïve Bayes model that was trained using a bag-of-words approach. All models were trained on the article title combined with the article text. We trained the neural network binary classifiers using 200 articles in the training set, 150 in the validation set, and 150 in the test set. The Naïve Bayes models were trained using a 300/200 train/test split. We selected the transformer-based models for their widespread adoption and because we could fit one model per frame on a 32 GB NVIDIA Tesla V100 SXM2 GPU; the Naïve Bayes model was selected as a simple baseline comparison. We trained both transformer models for 20 epochs, evaluating every 25 training steps, with two articles per training batch. Training for fewer epochs frequently led to a zero F1 score on the validation data and subsequent poor performance on the test set. We chose the saved model for each frame that had the best F1 score on the validation set during training as that frame’s final model. Both models performed best on the validation data with a learning rate of 5e-5. A computing instance with 8 GB of RAM and two CPU cores was sufficient to run this training along with the aforementioned GPU.
 
 ### Generative large language models
@@ -218,7 +212,7 @@ Here, we evaluate a few different large language models: Llama-3.1-8B Instruct (
 Due to their high computing requirements, the Claude and GPT models were only tested in the zero-shot setting. The llama models were tested in both zero-shot and fine-tuned settings. All the zero-shot tests were done on the entire set of 500 manually labelled articles. The fine-tuned settings were performed with a 300/200 train/test split. The prompts used for annotations are attached below:
 
 ::: {.callout-note icon="false"}
-#### LLM prompts for relevance coding
+#### LLM prompts for relevance classification
 
 **`SYSTEM_PROMPT =`**`"You're a communication researcher who is studying the news reporting of Mpox. You’ll perform relevance coding on news articles, by classifying articles as relevant, or not relevant. Remember to prioritize accuracy and clarity in your analysis, using the provided context and your expertise to guide your evaluation. Here's the codebook for you to follow for class definitions: " + RELEVANCE_CODEBOOK`
 
@@ -226,7 +220,7 @@ Due to their high computing requirements, the Claude and GPT models were only te
 :::
 
 ::: {.callout-important appearance="simple" icon="false"}
-After relevance coding, we obtained a set of 2224 relevant articles (as extrapolated using BERT). All further analysis will be based on these articles.
+After relevance classification, we obtained a set of 2224 relevant articles (as extrapolated using BERT). All further analysis will be based on these articles.
 :::
 
 ## Codebook development
@@ -253,7 +247,7 @@ Further details on the procedure invoked to develop the codebook will be elucida
 
 ### Discriminative language models
 
-\[ALYSSA/TYLER\] - insert how topic models were made. Also modify code in `Codebook/SLM/`
+We implemented BERTopic [@grootendorst] on the entire set of 2224 relevant articles after cleaning the texts for stop words.
 
 ### Generative large language models
 
@@ -317,13 +311,11 @@ The first and the third authors performed a codebook-assisted annotation procedu
 
 ### Discriminative language models
 
-\[ALYSSA\] - upload code, verify text
-
-Here, we used the same 3 discriminative language models - Naïve Bayes, BERT-base-cased and DeBERTa-v3-base to perform frame detection (using the same computing resources) as mentioned in the relevance coding section. All the models were trained on the labels produced by the first author on 400 articles (60/40 train/eval split), and tested on the 100 articles that were doubly annotated by both manual annotators.
+Here, we used the same 3 discriminative language models - Naïve Bayes, BERT-base-cased and DeBERTa-v3-base to perform frame detection (using the same computing resources) as mentioned in the relevance classification section. All the models were trained on the labels produced by the first author on 400 articles (60/40 train/eval split), and tested on the 100 articles that were doubly annotated by both manual annotators.
 
 ### Generative large language models
 
-Here, we evaluated the same models (with the same settings and computing resources) as mentioned in the relevance coding section. All the zero-shot tests were done on the set of 100 articles that were manually labelled by both annotators. The fine-tuned was performed using the remaining 400 articles manually labelled by the first author. The prompts used for annotations are attached below:
+Here, we evaluated the same models (with the same settings and computing resources) as mentioned in the relevance classification section. All the zero-shot tests were done on the set of 100 articles that were manually labelled by both annotators. The fine-tuned was performed using the remaining 400 articles manually labelled by the first author. The prompts used for annotations are attached below:
 
 ::: {.callout-note icon="false"}
 #### LLM prompts for frame detection
@@ -365,8 +357,6 @@ Here, we evaluated the same models (with the same settings and computing resourc
 
 ### Error analysis and mitigation
 
-INSERT precision-recall interpretation
-
 Following error analysis, we attempted various error mitigation strategies to improve frame detection outcomes. Again, due to its ease of use and open-source nature, we opted to run these analyses with llama-3.1-8B-instruct (8-bit quantized). All prompts used are attached below.
 
 -   **LLM as a judge:** Hallucinations, stochasticity and complex instructions remained a barrier to reliable frame detection outcomes. Following the suit of agentic workflow put forth by Farjam et al. [@farjam2025], we attempted to improve LLM outcomes by decomposing the task into two steps. First, we prompted two LLM agents (classifiers) to annotate the train set with the frame labels while providing a chain-of-thought reasoning. Second, we prompted another LLM agent (judge) to evaluate the responses provided by the classifier and output the final predictions. Using a chain-of-thought reasoning elicits better reasoning capabilities and improves transparency and interpretability. Pooling multiple answers (in our case, two) for the same input article allows for a more diverse set of predictions and thus creates room for the stochasticity that is inherent to LLM outcomes. Moreover, evaluating the responses using a third LLM (judge) improves reliability due to a potential to rectify hallucinations, and oversee adherence to the coding guidelines provided.
@@ -380,6 +370,8 @@ Following error analysis, we attempted various error mitigation strategies to im
     \vspace{0.5em}
 
 -   **Confidence scores:** One of the significant ways in which the iterative process improves qualitative coding is by a co-ordination of uncertainty. That is, the levels of certainty that different coders require in order to annotate a frame as "present" may vary. Consider this example: two coders A1 and A2 are 70% certain that a frame appears in an article X, but while coder A1 considers a frame F as present in article X if they're more than 60% certain, coder A2 considers a frame F as present in X only if they're more than 75% certain. Iterative coding procedures allows for a shared conception of this threshold. We attempted to circumvent this problem with LLMs by prompting the model to provide confidence scores instead of "yes/no" predictions. First, the model is prompted to provide confidence scores on a 100 articles (from the train set). Second, we binarised the predictions using a threshold for each frame, and estimate the threshold that maximizes Cohen's $\kappa$ in comparison to the human labels. Third, we prompted the LLM to annotate the test set with confidence scores for each article, and then deterministically binarize the scores based on the thresholds we estimated earlier.
+
+-   **Class Imbalance management for discriminative models:** The different classes in our analysis have varying levels of prevalence within the training data. Under-represented classes tend to do poorly in supervised algorithms. To manage this imbalance, we implemented focal loss [@jumle2025], which is designed to down-weight easy negatives and up-weight difficult positives, potentially helping low frequency frames where positive evidence is scarce. We also learn different thresholds for different frames instead of using the default threshold of 0.5, so that the decision rules can be tuned for each frame.
 
 ::: {.callout-note icon="false"}
 #### LLM prompts for error mitigation
@@ -660,7 +652,7 @@ calculate_scores <- function(dlist, A1, A2, column_A1, column_A2, column_match =
 
 ```
 
-## Relevance coding
+## Relevance classification
 
 ```{r}
 #| echo: false
@@ -1308,39 +1300,26 @@ frames <- c("sexual stigma and transmission routes",
             "human-interest stories",
             "broader health issues")
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
 models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence",
             "nb_imb", "bert_imb", "deberta_imb") 
-=======
+
 models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence", 
             "nb_imb", "bert_imb", "deberta_imb")
->>>>>>> Stashed changes
-=======
+
 models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence", 
             "nb_imb", "bert_imb", "deberta_imb")
->>>>>>> Stashed changes
+
 
 #turn to named list for caption
 names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) with LLM as judge",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with human feedback",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with decision trees",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with confidence scores",
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
                    "Naive Bayes with Class Imbalance management",
                    "BERT with Class Imbalance management",
                    "DeBERTa with Class Imbalance management")
-=======
-                   "Naive Bayes with Class Imbalance Management",
-                   "BERT with Class Imbalance Management",
-                   "DeBERTa with Class Imbalance Management")
->>>>>>> Stashed changes
-=======
-                   "Naive Bayes with Class Imbalance Management",
-                   "BERT with Class Imbalance Management",
-                   "DeBERTa with Class Imbalance Management")
->>>>>>> Stashed changes
+
 
 #create tables for each model metrics
 for(m in models)

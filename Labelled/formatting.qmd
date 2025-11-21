@@ -202,19 +202,8 @@ framing_list <- list(
   "bert" = read.csv("Framing/SLM/Predicted/Test/bert_test.csv", check.names = F),
   "deberta" = read.csv("Framing/SLM/Predicted/Test/deberta_test.csv", check.names = F),
   
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-  
-  #class imbalanace managed
-  "nb_imb" = read.csv("Framing/SLM/Class_imbalance/NB_test.csv", check.names = F),
-=======
   #Smaller language models - class imbalance adjusted
    "nb_imb" = read.csv("Framing/SLM/Class_imbalance/NB_test.csv", check.names = F),
->>>>>>> Stashed changes
-=======
-  #Smaller language models - class imbalance adjusted
-   "nb_imb" = read.csv("Framing/SLM/Class_imbalance/NB_test.csv", check.names = F),
->>>>>>> Stashed changes
   "bert_imb" = read.csv("Framing/SLM/Class_imbalance/BERT_test.csv", check.names = F),
   "deberta_imb" = read.csv("Framing/SLM/Class_imbalance/DeBERTa_test.csv", check.names = F),
 
