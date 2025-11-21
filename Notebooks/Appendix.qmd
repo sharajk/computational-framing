@@ -1308,17 +1308,28 @@ frames <- c("sexual stigma and transmission routes",
             "human-interest stories",
             "broader health issues")
 
+<<<<<<< Updated upstream
 models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence",
             "nb_imb", "bert_imb", "deberta_imb") 
+=======
+models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence", 
+            "nb_imb", "bert_imb", "deberta_imb")
+>>>>>>> Stashed changes
 
 #turn to named list for caption
 names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) with LLM as judge",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with human feedback",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with decision trees",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with confidence scores",
+<<<<<<< Updated upstream
                    "Naive Bayes with Class Imbalance management",
                    "BERT with Class Imbalance management",
                    "DeBERTa with Class Imbalance management")
+=======
+                   "Naive Bayes with Class Imbalance Management",
+                   "BERT with Class Imbalance Management",
+                   "DeBERTa with Class Imbalance Management")
+>>>>>>> Stashed changes
 
 #create tables for each model metrics
 for(m in models)
