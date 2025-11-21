@@ -174,14 +174,17 @@ Annotations available:
 3.  Naive Bayes
 4.  BERT large cased
 5.  DeBERTa-v3-small
-6.  Llama-3.1-8B-Instruct (8-bit quantized) zero-shot
-7.  Llama-3.1-8B-Instruct (8-bit quantized) fine-tuned
-8.  Llama-3.1-8B-Instruct (8-bit quantized) with LLM as judge
-9.  Llama-3.1-8B-Instruct (8-bit quantized) with human feedback
-10. Llama-3.1-8B-Instruct (8-bit quantized) with decision trees
-11. Llama-3.1-8B-Instruct (8-bit quantized) with confidence scores
-12. Claude Sonnet 4
-13. GPT-OSS-20B
+6.  Naive Bayes with class imbalance management
+7.  BERT large cased with class imbalance management
+8.  DeBERTa v3 small with class imbalance management
+9.  Llama-3.1-8B-Instruct (8-bit quantized) zero-shot
+10. Llama-3.1-8B-Instruct (8-bit quantized) fine-tuned
+11. Llama-3.1-8B-Instruct (8-bit quantized) with LLM as judge
+12. Llama-3.1-8B-Instruct (8-bit quantized) with human feedback
+13. Llama-3.1-8B-Instruct (8-bit quantized) with decision trees
+14. Llama-3.1-8B-Instruct (8-bit quantized) with confidence scores
+15. Claude Sonnet 4
+16. GPT-OSS-20B
 
 ```{r}
 #create a list of dataframes
@@ -198,6 +201,12 @@ framing_list <- list(
   "naive_bayes" = read.csv("Framing/SLM/Predicted/Test/naive_bayes_test.csv", check.names = F),
   "bert" = read.csv("Framing/SLM/Predicted/Test/bert_test.csv", check.names = F),
   "deberta" = read.csv("Framing/SLM/Predicted/Test/deberta_test.csv", check.names = F),
+  
+  
+  #class imbalanace managed
+  "nb_imb" = read.csv("Framing/SLM/Class_imbalance/NB_test.csv", check.names = F),
+  "bert_imb" = read.csv("Framing/SLM/Class_imbalance/BERT_test.csv", check.names = F),
+  "deberta_imb" = read.csv("Framing/SLM/Class_imbalance/DeBERTa_test.csv", check.names = F),
 
   #Large language models (post 2023)
   "llama_zero-shot" = read.csv("Framing/LLM/Predicted/Test/llama3.1:8b-instruct-q8_0_zshot_1to1.csv", check.names = F),
@@ -229,8 +238,8 @@ save(framing_list, file = "Labelled/Framing_test.RData")
 Calculate how different annotators performed on the relevance coding task with respect to each other on the test set.
 
 ```{r}
-A1 <- "A1" #annotator 1
-A2 <- "claude_zero-shot" #annotator 2
+A1 <- "deberta" #annotator 1
+A2 <- "deberta_imb" #annotator 2
 
 column_match <- "stories_id" #column used to track the annotation file IDs
 

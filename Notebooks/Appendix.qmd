@@ -1044,7 +1044,7 @@ library(snakecase)
 df1 <- read.csv(here::here("Codebook/LLM/", "llama3.1:8b-instruct-q8_0_zshot_llm_codebook.csv"), check.names = F)
 
 #annotations on gold standard codebook
-df_gold <- read.csv(here::here("Framing/LLM/Predicted/","llama3.1:8b-instruct-q8_0_zshot.csv"),
+df_gold <- read.csv(here::here("Framing/LLM/Predicted/Test/","llama3.1:8b-instruct-q8_0_zshot.csv"),
                     check.names = F)
 
 #map LLM frames to manual frames
@@ -1308,13 +1308,17 @@ frames <- c("sexual stigma and transmission routes",
             "human-interest stories",
             "broader health issues")
 
-models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence") #add ensemble
+models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence",
+            "nb_imb", "bert_imb", "deberta_imb") 
 
 #turn to named list for caption
 names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) with LLM as judge",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with human feedback",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with decision trees",
-                   "Llama 3.1-8B-Instruct (8-bit quantized) with confidence scores")
+                   "Llama 3.1-8B-Instruct (8-bit quantized) with confidence scores",
+                   "Naive Bayes with Class Imbalance management",
+                   "BERT with Class Imbalance management",
+                   "DeBERTa with Class Imbalance management")
 
 #create tables for each model metrics
 for(m in models)
