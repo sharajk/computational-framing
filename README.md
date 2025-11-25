@@ -3,7 +3,7 @@
 This repository contains codes for the analysis, appendix and figures obtained in the manuscript:\
 Computational framing analysis revisited: On LLMs for studying news coverage.
 
-Find the full paper here:
+Find the full paper here: https://doi.org/10.48550/arXiv.2511.17746
 
 ### Authors
 
