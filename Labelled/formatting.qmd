@@ -271,6 +271,7 @@ Annotations available:
 4.  BERT large cased for 2221 articles
 5.  DeBERTa-v3-small for 2221 articles
 6.  Claude Sonnet 4 for 2224 articles
+7.  GPT-OSS-20B on 500 articles
 
 ```{r}
 #create a list of dataframes
@@ -288,7 +289,8 @@ framing_list <- list(
 
   #Large language models (post 2023)
   "llama_zero-shot" = read.csv("Framing/LLM/Predicted/All/llama3.1:8b-instruct-q8_0_zshot_all.csv", check.names = F),
-  "claude_zero-shot" = read.csv("Framing/LLM/Predicted/All/claude-sonnet-4-20250514_zshot_all.csv", check.names = F)
+  "claude_zero-shot" = read.csv("Framing/LLM/Predicted/All/claude-sonnet-4-20250514_zshot_all.csv", check.names = F),
+  "gpt-oss_zero-shot" = read.csv("Framing/LLM/Predicted/All/gpt-oss-20b_zshot_all.csv", check.names = F)
 )
 
 keep_columns <- c("stories_id","media_name", "title","url","text","keywords",
