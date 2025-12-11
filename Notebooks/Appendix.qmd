@@ -373,6 +373,8 @@ Following error analysis, we attempted various error mitigation strategies to im
 
 -   **Class Imbalance management for discriminative models:** The different classes in our analysis have varying levels of prevalence within the training data. Under-represented classes tend to do poorly in supervised algorithms. To manage this imbalance, we implemented focal loss [@jumle2025], which is designed to down-weight easy negatives and up-weight difficult positives, potentially helping low frequency frames where positive evidence is scarce. We also learn different thresholds for different frames instead of using the default threshold of 0.5, so that the decision rules can be tuned for each frame.
 
+-   **Design-based supervised learning:** Large language models clearly vary in the performance based on different tasks: larger models are better for some tasks, smaller for others. Ensemble learning approaches that combine the annotations from different models may circumvent the limitations of individual models. Here, we use Designed-based Supervised Learning (DSL) [@egami] to perform frame analysis based on annotations from: Naive Bayes, BERT, DeBERTa, Llama, GPT-OSS and Claude (all zero-shot). The ensemble classifier learns its classification rules through a training dataset of 400 articles where its provided both the gold standard annotations and model predictions. Then, it predicts labels for the test set of 100 articles, which we further evaluate using the gold standard annotations.
+
 ::: {.callout-note icon="false"}
 #### LLM prompts for error mitigation
 
@@ -1302,14 +1304,7 @@ frames <- c("sexual stigma and transmission routes",
 
 
 models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence",
-            "nb_imb", "bert_imb", "deberta_imb") 
-
-models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence", 
-            "nb_imb", "bert_imb", "deberta_imb")
-
-models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence", 
-            "nb_imb", "bert_imb", "deberta_imb")
-
+            "nb_imb", "bert_imb", "deberta_imb", "ensemble_dsl") 
 
 #turn to named list for caption
 names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) with LLM as judge",
@@ -1318,7 +1313,8 @@ names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) with LLM as judge",
                    "Llama 3.1-8B-Instruct (8-bit quantized) with confidence scores",
                    "Naive Bayes with Class Imbalance management",
                    "BERT with Class Imbalance management",
-                   "DeBERTa with Class Imbalance management")
+                   "DeBERTa with Class Imbalance management",
+                   "Design-based Supervised learning")
 
 
 #create tables for each model metrics
