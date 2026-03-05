@@ -1,0 +1,1371 @@
+---
+title: "Computational frame analysis revisited:
+on LLMs for studying news coverage"
+
+subtitle: "Supplementary material"
+   
+format: 
+  pdf:
+    mainfont: "Times New Roman" 
+    sansfont: "Times New Roman"
+    include-in-header:
+      text: |
+        % change margin spacings
+        \usepackage[letterpaper,margin=1in,footskip=20pt]{geometry}
+        % set table numbering
+        \renewcommand{\thetable}{A\arabic{table}} 
+        % set figure numbering
+        \renewcommand{\thefigure}{A\arabic{figure}} 
+        % set font sizes
+        \usepackage{sectsty}
+        \sectionfont{\fontsize{16}{10}\selectfont}   % H1
+        \subsectionfont{\fontsize{14}{10}\selectfont} % H2
+        \subsubsectionfont{\fontsize{12}{10}\selectfont} % H3
+        \renewcommand\normalsize{\fontsize{10}{10}\selectfont} % body
+        % change section numbering format
+        \setcounter{secnumdepth}{3}
+        \renewcommand\thesection{A\arabic{section}.}        % A1.
+        \renewcommand\thesubsection{\thesection\arabic{subsection}.} %A1.1
+        \renewcommand\thesubsubsection{\thesubsection\arabic{subsubsection}} %A1.1.1
+        % enter newline after headings
+        \usepackage{titlesec}
+        % H4
+        \titleformat{\paragraph}[block]
+          {\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+        \titlespacing*{\paragraph}{0pt}{1.25ex plus .5ex minus .2ex}{0.8ex}
+        % H5
+        \titleformat{\subparagraph}[block]
+          {\normalfont\normalsize\bfseries}{\thesubparagraph}{1em}{}
+        \titlespacing*{\subparagraph}{0pt}{1ex plus .4ex minus .2ex}{0.6ex}
+editor: visual
+bibliography: references.bib
+csl: elsevier-vancouver.csl
+editor_options: 
+  chunk_output_type: console
+---
+
+# Data
+
+## Data collection
+
+The raw data was collected using the MediaCloud webAPI [@roberts2021]. We queried for articles containing the terms "mpox" or "monkeypox", published between May 1 to October 31, 2022 (6 months) by 248 national level news outlets in the US. This dataset consists of 7721 articles.
+
+Then, texts, keywords and authors of these articles were webscraped using newspaper4k [@paraschiv].
+
+## Pre-processing
+
+### Selection
+
+Here, articles were chosen for further analysis through the following steps:
+
+1.  Articles whose texts could not be scraped from newspaper4k were excluded.
+2.  Articles that had fewer than 250 words were excluded.
+3.  Articles that contain more characters than the excel cell limit (32767) are excluded.
+4.  Articles whose main texts didn't contain the term "monkeypox" or "mpox" were excluded.
+5.  Articles that contained the terms: "associated press", "wired" or "reuters" were removed to remove syndicated texts and maximize diversity in the dataset.
+
+### Deduplication
+
+Many articles are copy-pasted by the same outlet on different days or similar outlets. These articles should be included only once in the manual annotation stage to maximize variation within annotated articles.
+
+We constructed a graph where nodes were articles and two articles A and B were connected by a directed edge (A, B) whose weight was equal to the fraction of words in A that were also seen in B. So if one article is "Whales are very cool and dolphins are also great" and the other article is "I think whales are great and they are also large", the edge weights would be 6/9 and 6/10 (from A to B and B to A) ("whales", "are", "and", "are", "also", "great").
+
+Then we pruned the graph to only include edges whose weight was greater than or equal to a selection of thresholds (\[0.75, 0.85, 0.9, 0.95, 0.975\]). For each of these graphs, we pulled out all the strongly connected components and, for each SCC, we removed all but one article (the first one in the component detected by networkx, so this is fairly arbitrary) from the dataset.
+
+We used the dataset with 95% threshold for assigning articles for manual annotation and training language models. Towards the end, when we are predicting annotations over articles that haven't been annotated, these deduplicated articles will be kept in the test set.
+
+### Boiler-plate removal
+
+A lot of articles contain boiler plate texts (advertisements, information about the author, highlights/key takeaways etc.) that aren't relevant to the article's content. These texts need to be removed in order to optimise the language models.
+
+To remove boilerplate, we iteratively examined articles from the same outlet, noting common phrases, scraping artifacts ("Advertisement Here"), and paragraphs that were repeated before/after the article text. We added such pieces of text to one of three lists: clip_before, noting chunks of text that came after various advertisements or other irrelevant information and directly preceded article text; clip_after, which kept track of chunks of text after which no article text would appear; and clip_at, noting scraping artifacts and other boilerplate text that appears within an article but is not part of the article text. We then removed text from each article, clipping anything that came before a chunk of text in clip_before (inclusive of the text in clip_before), anything that came after a chunk of text in clip_after, inclusive of the text chunk itself, and simply deleting anything in clip_at.
+
+::: {.callout-important appearance="simple" icon="false"}
+After collection preprocessing, the curated dataset contains 3314 articles from 131 unique national level news outlets, ranging over a 6 month timeline of May-October 2022.
+:::
+
+# Methods
+
+| Model                   | Size (number of parameters)                                        | Accessibility comments                                                  |
+|------------------------|------------------------|------------------------|
+| Multinomial Naïve Bayes | Depends on token size of the training dataset (\<0.1M in our case) | Free to use, requires low compute power, explainable                    |
+| BERT-base-cased         | 110M                                                               | Free to use, transparent pre-training data, requires high compute power |
+| DeBERTa-v3-base         | 184M                                                               | Free to use, transparent pre-training data, requires high compute power |
+| Llama-3.1-8B-instruct   | 8B                                                                 | Free to use, opaque pre-training data, requires high compute power      |
+| GPT-OSS-20B             | 20B                                                                | Free to use, opaque pre-training data, requires high compute power      |
+| Claude Sonnet 4.0       | Undisclosed (estimated \~100B)                                     | Pay per token, opaque pre-training data, runs on Anthropic servers      |
+
+: Comments on the size (number of parameters) and accessibility for the language models we tested.
+
+The following sections elucidate the setup and evaluation design for the three broad approaches: manual coding, discriminative language models and generative large language models. Each of them are evaluated across three tasks: relevance classification, frames codebook development and frame detection.
+
+## Relevance classification
+
+Since our data collection was based on string matching for the term "monkeypox" or "mpox", our current dataset contains articles that could be about other issues, but only briefly mention mpox. Hence at this stage, we further processed articles to restrict our analysis to articles that were actually about Mpox. To this end, first, we perform a codebook-assisted qualitative analysis, as follows.
+
+### Manual coding
+
+Codebook-assisted qualitative analysis was performed by the first and the third authors of the paper on a subset of the preprocessed articles, as follows.
+
+-   **Data familiarization:** The manual annotators spent a week going over a random subset of the articles (100/4142) and identified points of relevance/irrelevance within the subset. They met and discussed after going over the articles independently.
+
+-   **Codebook development:** The annotators then developed a codebook (attached below) for relevance classification based on their discussions.
+
+-   **Manual annotation:** The manual annotators then classify a set of 500 articles as relevant/irrelevant based on the attached codebook. These articles were chosen by randomly sampling with an assigned probability for each article in the entire pre-processed dataset (3314 articles).
+
+    -   After the first round of independent coding, the annotators achieved a Cohen's $\kappa = 0.82$. They disagreed over 41 articles.
+
+    -   Then they discussed divergences in their understandings based on the 41 disputed articles.
+
+    -   In the second round, the annotators independently recoded the 41 articles that they disagreed on, then achieving a Cohen's $\kappa = 0.97$.
+
+::: {.callout-tip icon="false"}
+#### Relevance codebook
+
+**Code: Relevant (1)**
+
+**Definition:**
+
+An article is marked *Relevant (1)* if it contains [explicit]{.underline} content directly discussing Mpox in relation to the human epidemic context.
+
+**Criteria (one or more must apply explicitly):**
+
+-   Mpox case counts, geographic spread, infection rates.
+
+-   Mpox transmission patterns, e.g., discussion of how it spreads between people.
+
+-   Information about Mpox vaccines, availability, development, distribution.
+
+-   Identification or discussion of at-risk groups (e.g., MSM, immunocompromised individuals, anyone who engages in close contact with a patient).
+
+-   Descriptions/critiques of the public health response (e.g., health advisories, CDC/WHO statements, local health campaigns).
+
+-   Details about epidemiological characteristics of Mpox (e.g., symptoms, strains, zoonotic origins when tied to the outbreak).
+
+-   Discussion of media coverage or representation of Mpox in the news or public discourse.
+
+-   Government policy, funding, or international efforts directly targeting Mpox.
+
+-   Personal stories about people dealing with Mpox/stigma due to Mpox.
+
+**Code: Irrelevant (0)**
+
+**Definition:**
+
+An article is marked *Irrelevant* if it does not substantively discuss Mpox in a way related to the epidemic, or mentions it only in passing, satirical, or non-human contexts.
+
+**Criteria (one or more must apply/none of the relevance criteria applies):**
+
+-   Incomplete Scrapes
+
+    -   Article is cut off mid-sentence or has only a headline or metadata. (Keep articles where they’re cut off from a paragraph or so, leaving the scraped data still coherent, no need to cross check with links)
+
+-   Non-English articles
+
+-   Briefings/Quick Hits/Highlight Memos
+
+    -   Summarized, non-substantive listings with no in-depth coverage.
+
+    -   E.g., “Top 5 health stories today: flu, Mpox, RSV...”
+
+-   General Discussion of Public Health/Diseases/Vaccines
+
+    -   Mpox only mentioned as one of many diseases in a broad context.
+
+    -   E.g., “Vaccination efforts continue for diseases such as flu, Mpox, and measles.”
+
+-   Satirical or Throwaway Mentions
+
+    -   Mpox used as a joke, stereotype, or stigmatizing punchline.
+
+    -   E.g., “Avoid gay men or you’ll get Mpox — just kidding, but be careful!”
+
+-   Animal/Primate/Zoonotic Research (without human epidemic connection)
+
+    -   Mpox mentioned in the context of animal studies or general zoonoses.
+
+    -   E.g., “Study finds new poxvirus in African rodents; Mpox cited as historical example.”
+
+-   Hyperlinked References Only
+
+    -   Mpox is only mentioned in a hyperlink or suggested reading, not in the body.
+
+    -   E.g., “...a variety of poxviruses \[read more here\].”
+
+-   General LGBTQ+ Issue Coverage
+
+    -   Mpox name-dropped in a list of issues affecting the queer community but not discussed.
+
+    -   E.g., “From mental health to Mpox, queer health is under threat.”
+
+**Note**
+
+-   Ambiguous Mentions: If it’s unclear whether the article is relevant, lean toward exclusion and mark it *irrelevant*.
+
+-   Mixed Content: If an article contains some irrelevant framing (e.g., satire, general disease mentions) but also includes relevant details (case counts, public health response, etc.), mark as *Relevant*.
+
+-   Contextual Zoonosis: If zoonotic origins or animal vectors are discussed with direct connection to the current human outbreak, mark *Relevant*.
+
+-   Focus on explicit content — assume implicit relevance (e.g., inferred risk or allusion) is not sufficient.
+:::
+
+### Discriminative language models
+
+In this section, we evaluated two transformer-based models, deberta-v3-base [@he] and bert-base-cased [@devlin], as well as a Naïve Bayes model that was trained using a bag-of-words approach. All models were trained on the article title combined with the article text. We trained the neural network binary classifiers using 200 articles in the training set, 150 in the validation set, and 150 in the test set. The Naïve Bayes models were trained using a 300/200 train/test split. We selected the transformer-based models for their widespread adoption and because we could fit one model per frame on a 32 GB NVIDIA Tesla V100 SXM2 GPU; the Naïve Bayes model was selected as a simple baseline comparison. We trained both transformer models for 20 epochs, evaluating every 25 training steps, with two articles per training batch. Training for fewer epochs frequently led to a zero F1 score on the validation data and subsequent poor performance on the test set. We chose the saved model for each frame that had the best F1 score on the validation set during training as that frame’s final model. Both models performed best on the validation data with a learning rate of 5e-5. A computing instance with 8 GB of RAM and two CPU cores was sufficient to run this training along with the aforementioned GPU.
+
+### Generative large language models
+
+Here, we evaluate a few different large language models: Llama-3.1-8B Instruct (8-bit quantized) [@llama3.1], Claude Sonnet 4 [@claudes], and GPT-OSS-20B [@introduc2025]. The Llama models were run on a local machine with a 16GB Apple M1 chip using an open-source application Ollama [@ollama/o2025]. The Claude models were run on Anthropic's servers using their Python API client [@anthropi2025]. The GPT-OSS models were run on a 140GB NVIDIA H200 GPU.
+
+Due to their high computing requirements, the Claude and GPT models were only tested in the zero-shot setting. The llama models were tested in both zero-shot and fine-tuned settings. All the zero-shot tests were done on the entire set of 500 manually labelled articles. The fine-tuned settings were performed with a 300/200 train/test split. The prompts used for annotations are attached below:
+
+::: {.callout-note icon="false"}
+#### LLM prompts for relevance classification
+
+**`SYSTEM_PROMPT =`**`"You're a communication researcher who is studying the news reporting of Mpox. You’ll perform relevance coding on news articles, by classifying articles as relevant, or not relevant. Remember to prioritize accuracy and clarity in your analysis, using the provided context and your expertise to guide your evaluation. Here's the codebook for you to follow for class definitions: " + RELEVANCE_CODEBOOK`
+
+**`USER_PROMPT =`**`"Is the following article relevant? Provide your response in a JSON array format, as follows, and include nothing else in the response:{"relevance": "yes/no"}. If you are uncertain about the classification, force a decision to choose "yes" or "no". " + ARTICLE_TEXT`
+:::
+
+::: {.callout-important appearance="simple" icon="false"}
+After relevance classification, we obtained a set of 2224 relevant articles (as extrapolated using BERT). All further analysis will be based on these articles.
+:::
+
+## Frames codebook development
+
+In this section we developed a issue-specific frame detection codebook using a random subset of a 100 (out of 2224) relevant articles. We tested and evaluated the codebooks developed using 3 techniques: applied thematic analysis (manual), transformers-based topic modelling, and LLM-based inductive thematic analysis.
+
+### Manual coding
+
+![Six-phase analytical procedure for developing a frames codebook, adapted from Braun and Clarke's thematic analysis [@braun2006].](ATA_procedure.png)
+
+The first and the third authors of the paper performed applied thematic analysis [@braun2006; @guest2012; @mackieson2019] on 100 articles, with the following methodological and epistemic foundations:
+
+-   We treated each article as the unit of analysis. Consistent with the rest of the study, we decided to treat each article as representative of the narrative frame that the author of the article intends to communicate.
+
+-   Our analysis was **inductive**, i.e., did not rely on a pre-existing typology (ergo deductive) of framing, since issue-specific frames tend to be contextually specific and aren't appropriately pre-defined by the existing literature for our use case.
+
+-   Our analysis was **interpretive**, i.e, we urged the researchers to go beyond explicit lexical cues and denotations when interpreting the texts. While interpretive research does forego an appeal to value-detached objectivity due its inherent subjectivity, we maintain intersubjectivity [@douglas2004] by evaluating the reliability of the generated codebook via inter-rater scores.
+
+-   Our analysis was **iterative** and **reflexive**. The manual coders developed their codebooks over two rounds of analysis. While the annotations within each round was independent between coders, they were encouraged to discuss their outcomes after each round, and reflect upon how their standpoint on the articles affected their interpretation of the same.
+
+-   We follow Matthes and Köhring's [@matthes2008] procedure to realize and define frames in terms of **Entman's frame elements -** problem definitions, causal interpretations, moral evaluations and treatment recommendations [@entman1993].
+
+Further details on the procedure invoked to develop the codebook will be elucidated in later work (Kunjar, forthcoming).
+
+### Discriminative language models
+
+We implemented BERTopic [@grootendorst] on the entire set of 2224 relevant articles after cleaning the texts for stop words.
+
+### Generative large language models
+
+We followed instructions provided by Dai 2023 [@dai2023] and De Paoli [@depaoli2023] to perform inductive thematic analysis using LLMs. Due to its low compute requirements, we used Llama-3.1-8B-Instruct (8-bit quantised) for this task. The prompts used for this task are attached below. The procedure broadly involved three steps:
+
+1.  **Generating initial codes:** Here, we provided the model with a set of 100 articles (one at a time) and prompted it to generate codes for each article. The model generated 213 unique codes at this point.
+2.  **Clustering codes into themes:** Here, we curate all the initial codes generated by the model and prompt it to cluster them based on conceptual similarity. The model produced 21 themes.
+3.  **Reviewing themes and defining frames:** Here, we finally review the themes produced by the model and prompt the model to create generate a set of unique frames based on Entman's [@entman1993] definition of framing.
+
+::: {.callout-note icon="false"}
+##### Prompts for codebook development with Llama
+
+###### **Generating initial codes**
+
+\vspace{0.5em}
+
+**`SYSTEM_PROMPT =`**`"You're a communication researcher who is studying the news coverage of the Mpox epidemic. You will be performing inductive thematic analysis. Your job to generate initial codes for articles. Your expertise is crucial in identifying issue-specific frames that can sway pubic opinions and distort public discourse. Avoid generic or overly broad categories. Do not assume predefined categories, it is imperative that the codes are driven by the data. Think carefully to determine codes that are representative of the articles but also have maximum variability between them.`
+
+`Format your response has to be a JSON array of objects, and include nothing else in the response. Each object should contain the following keys: { 1. "Index": "A number indicating the code order", 2. "Name": "A short name for the code (max 3 words)", 3. "Description": "A 3-line explanation of the code", 4. "Example": "A representative quote (max 2 sentences)".}"`
+
+**`USER_PROMPT =`**`"Attached below is an article about Mpox. Identify upto 3 unique and prevelant codes from the text. Ensure that your output format adheres to the instructions provided." + ARTICLE_TEXT`
+
+------------------------------------------------------------------------
+
+###### **Clustering codes into themes**
+
+\vspace{0.5em}
+
+**`SYSTEM_PROMPT =`**`"You're a communication researcher who is conducting an issue-specific narrative frame analysis on the news coverage of the Mpox epidemic. A researcher has already gone over news articles and come up with a list of initial codes through inductive coding. Your job is go over a set of initial codes and cluster them to flesh out unique frames. In his seminal work, Entman said "Framing essentially involves selection and salience. To frame is to select some aspects of a perceived reality and make them more salient in a communicating text, in such a way as to promote a particular problem definition, causal interpretation, moral evaluation, and/or treatment recommendation for the item described." Follow Entman's principles and define frames based on the 4 unique framing elements. Prioritize frame clarity and uniqueness.`
+
+`Format your response as an array of upto 3 JSON objects, and include nothing else in the response. Each object should represent a frame as follows: { "Name": "A short name for the frame (max 3 words)", "Problem definition": "How do this frame define the problem at hand?", "Causal attribution": "What actors or forces does this frame attribute the cause of the problem to?", "Moral evaluation": "What value judgements are being made by this frame?" "Treatment recommendation": "What remedies does the frame suggest for tackling the problem?" "Example": "A representative quotes (max 2 lines each)". }"`
+
+**`USER_PROMPT =`**`"Ensure that you adhere to the output format provided. Go over the attached codes and group them into frames for a frame analysis. The following text contains all the identified codes as a JSON array of objects." + INITIAL_CODES`
+
+------------------------------------------------------------------------
+
+###### **Reviewing themes and defining frames**
+
+\vspace{0.5em}
+
+**`SYSTEM_PROMPT =`**`"You're a communication researcher who is conducting an issue-specific narrative frame analysis on the news coverage of the Mpox epidemic. In his seminal work, Entman said "Framing essentially involves selection and salience. To frame is to select some aspects of aperceived reality and make them more salient in a communicating text, in such a way as to promote a particular problem definition, causal interpretation, moral evaluation, and/or treatment recommendation for the item described." A researcher has already gone over news articles and come up with a list of frames with Entman's framing elements. Your job is to go over all the frames, group them based on conceptual similarity and produce a revised set of frames with upto 10 unique frames. Follow Entman's principles and define frames based on the 4 unique framing elements. Take your time to think carefully and prioritize frame clarity and uniqueness.`
+
+`Format your response as an array of upto 10 JSON objects, and include nothing else in the response. Each object should represent a frame as follows: { "Name": "A short name for the frame (max 3 words)", "Description": "2-3 lines of detailed description of the frame", "Problem definition": "How do this frame define the problem at hand?", "Causal attribution": "What actors or forces does this frame attribute the cause of the problem to?", "Moral evaluation": "What value judgements are being made by this frame?" "Treatment recommendation": "What remedies does the frame suggest for tackling the problem?" "Example": "A representative quotes (max 2 lines each)". }"`
+
+**`USER_PROMPT =`**`"Go over the attached set of frames and produce a revised set of upto 10 unique frames for a codebook based annotation procedure. The following text contains all the identified frames as a JSON array of objects." + CLUSTERED_THEMES`
+:::
+
+## Frame detection
+
+### Manual coding
+
+The first and the third authors performed a codebook-assisted annotation procedure (codebook attached in results) on a subset of relevant articles. The annotation was one-to-many, i.e., for each article, they simultaneously detected for all seven frames.
+
+-   The manual coders annotated a set of 100 articles (sampled at random) over two rounds.
+
+    -   They achieved an average Cohen's $\kappa = 0.57$ in the first round.
+
+    -   They discussed their disagreements and independently recoded the articles that they disagreed to achieve a Cohen's $\kappa = 0.84$.
+
+-   The first then proceeded to annotate an additional subset of 400 articles for training language models in the subsequent analysis.
+
+### Discriminative language models
+
+Here, we used the same 3 discriminative language models - Naïve Bayes, BERT-base-cased and DeBERTa-v3-base to perform frame detection (using the same computing resources) as mentioned in the relevance classification section. All the models were trained on the labels produced by the first author on 400 articles (60/40 train/eval split), and tested on the 100 articles that were doubly annotated by both manual annotators.
+
+### Generative large language models
+
+Here, we evaluated the same models (with the same settings and computing resources) as mentioned in the relevance classification section. All the zero-shot tests were done on the set of 100 articles that were manually labelled by both annotators. The prompts used for annotations are attached below:
+
+::: {.callout-note icon="false"}
+#### LLM prompts for frame detection
+
+**`SYSTEM_PROMPT =`**`"You're a communication researcher who is studying the news reporting of Mpox. You’ll perform a codebook assisted frame analysis on news articles. Identify the frames from the codebook that are present in the article. Here is the codebook with frame definitions: " + FRAMES_CODEBOOK`
+
+**`USER_PROMPT =`**`"Identify frames in the article with the following guidelines:`
+
+`1. Read the entire article carefully before coding`
+
+`2. Identify all the frames present in each article`
+
+`3. Some articles maybe irrelevant to the Mpox epidemic or may not contain any of the frames mentioned in the codebook. In this case, mark "no" for every frame.`
+
+`4. Ensure at least 2 framing dimensions are explicitly present (unless noted otherwise)`
+
+`5. Use frame descriptions and examples to guide decision`
+
+`6. All coding should be based on EXPLICIT presence of the frame. Thus, if a frame isn't explicitly present, but implicitly implied, than mark "no" for that frame.`
+
+`Provide your response in a JSON array format, as follows, and include nothing else in the response:`
+
+`{"sexual stigma and transmission routes": "yes/no",`
+
+`"racial disparities and stigmatising name": "yes/no",`
+
+`"global relations": "yes/no",`
+
+`"public health failure": "yes/no",`
+
+`"epidemic preparedness and surveillance": "yes/no",`
+
+`"human-interest stories": "yes/no",`
+
+`"broader health issues": "yes/no"}.`
+
+`If you are uncertain about the annotations for any frame, force a decision to choose "yes" or "no". "+ ARTICLE_TEXT`
+:::
+
+### Alternative implementation and error mitigation strategies
+
+Following error analysis, we attempted various popular strategies to classification outcomes. All prompts used are attached below.
+
+#### Generative LLMs
+
+-   **Fine-tuning:** Fine tuning allows for further training of pre-trained generative LLMs on a smaller task specific dataset to improve performance, by modifying the final few layers of the neural network [@parthasarathy]. We fine-tuned Llama on 400 articles before evaluating on the test set.
+
+    \vspace{0.5em}
+
+-   **LLM-as-judge:** Hallucinations, stochasticity and complex instructions remained a barrier to reliable frame detection outcomes. Following the suit of agentic workflow put forth by Farjam et al. [@farjam2025], we attempted to improve LLM outcomes by decomposing the task into two steps. First, we prompted two LLM agents (classifiers) to annotate the train set with the frame labels while providing a chain-of-thought reasoning. Second, we prompted another LLM agent (judge) to evaluate the responses provided by the classifier and output the final predictions. Using a chain-of-thought reasoning elicits better reasoning capabilities and improves transparency and interpretability. Pooling multiple answers (in our case, two) for the same input article allows for a more diverse set of predictions and thus creates room for the stochasticity that is inherent to LLM outcomes. Moreover, evaluating the responses using a third LLM (judge) improves reliability due to a potential to rectify hallucinations, and oversee adherence to the coding guidelines provided.
+
+    \vspace{0.5em}
+
+-   **Human-in-the-loop:** The qualitative analytical procedures we employed were iterative in nature - where the coders annotated a set of articles independently, met to discuss disagreements, and then returned to annotate articles again. We attempted to mimic this approach with LLMs, so that they could align themselves better with the manual coders. This technique was inspired by RHLF (reinforcement learning with human feedback), where humans provide feedback to LLM responses to align model predictions with human preferences before the final prediction task. First, we prompted the LLM to provide a frame labels and chain-of-thought reasoning for a set of 30 articles (chosen randomly from the 400 articles in the train set). Second, the first author evaluated each prediction manually and provided a response regarding how the model performed, where it went wrong, and what the correct labels would be. Third, we fine-tuned the model with these exchanges. Finally, we prompt the fine-tuned model to provide predictions on the test set. Thus, this technique combines the chain-of-thought reasoning capabilities along with explicit human inputs and reasoning, allowing for a more interactive and iterative approach.\
+    \vspace{0.5em}
+
+-   **Decision trees on decomposed task:** Our coding task comprised of a reasonably long and detailed codebook. While the models we used allowed for long input token lengths, longer inputs and nested tasks often lead to worse outcomes. Here, inspired by Burscher et al's indicator-based coding questions [@burscher2014] we decomposed our task to finest grain possible. First, we converted the codebook into a list of 55 yes/no questions based on the description of each frame and its frame elements (8 questions per frame on average). Second, we prompted to LLM to simply answer these questions, a few at a time, without any explicit codebook. Then, we devised a decision-tree that deterministically assigns a label for each frame based on the responses to these questions. Thus, we were able to drastically downsize the input token length, and reduce some of the stochasticity due to the deterministic nature of the decision-tree.\
+    \vspace{0.5em}
+
+-   **Verbalized confidence scores:** One of the significant ways in which the iterative process improves qualitative coding is by a co-ordination of uncertainty. That is, the levels of certainty that different coders require in order to annotate a frame as "present" may vary. Consider this example: two coders A1 and A2 are 70% certain that a frame appears in an article X, but while coder A1 considers a frame F as present in article X if they're more than 60% certain, coder A2 considers a frame F as present in X only if they're more than 75% certain. Iterative coding procedures allows for a shared conception of this threshold. We attempted to circumvent this problem with LLMs by prompting the model to provide confidence scores instead of "yes/no" predictions. This method was inspired by Yang et al's procedure [@yang]. First, the model is prompted to provide confidence scores on a 100 articles (from the train set). Second, we binarised the predictions using a threshold for each frame, and estimate the threshold that maximizes Cohen's $\kappa$ in comparison to the human labels. Third, we prompted the LLM to annotate the test set with confidence scores for each article, and then deterministically binarize the scores based on the thresholds we estimated earlier.
+
+    #### Discriminative models
+
+    **Class Imbalance management:** The different classes in our analysis have varying levels of prevalence within the training data. Under-represented classes tend to do poorly in supervised algorithms. To manage this imbalance, we implemented focal loss [@jumle2025], which is designed to down-weight easy negatives and up-weight difficult positives, potentially helping low frequency frames where positive evidence is scarce. We also learn different thresholds for different frames instead of using the default threshold of 0.5, so that the decision rules can be tuned for each frame.
+
+    #### Ensemble learning
+
+    **Design-based supervised learning:** Large language models clearly vary in the performance based on different tasks: larger models are better for some tasks, smaller for others. Ensemble learning approaches that combine the annotations from different models may circumvent the limitations of individual models. Here, we use Designed-based Supervised Learning (DSL) [@egami] to perform frame analysis based on annotations from: Naive Bayes, BERT, DeBERTa, Llama, GPT-OSS and Claude (all zero-shot). The ensemble classifier learns its classification rules through a training dataset of 400 articles where its provided both the gold standard annotations and model predictions. Then, it predicts labels for the test set of 100 articles, which we further evaluate using the gold standard annotations.
+
+::: {.callout-note icon="false"}
+#### LLM prompts for alternative implementation strategies
+
+\vspace{0.5em}
+
+##### LLM-as-judge
+
+\vspace{0.5em}
+
+**Classifiers**
+
+\vspace{0.5em}
+
+**`SYSTEM_PROMPT = "`**`You're a communication researcher who is studying the news reporting of Mpox. You’ll perform a codebook assisted frame analysis on news articles. Identify the frames from the codebook that are present in the article. Here is the codebook with frame definitions:" + CODEBOOK`
+
+**`USER_PROMPT = "`**`Identify frames in the article with the following guidelines:`
+
+`1. Read the entire article carefully before coding`
+
+`2. Identify all frames present in each article`
+
+`3. Some articles maybe irrelevant to the Mpox epidemic or may not contain any of the frames mentioned in the codebook. In this case, mark "no" for every frame.`
+
+`4. Ensure at least 2 framing dimensions are explicitly present (unless noted otherwise)`
+
+`5. Use frame descriptions and examples to guide decisions`
+
+`6. All coding should be based on EXPLICIT presence of the frame. Thus, if a frame isn't explicitly present, but implicitly implied, than mark "no" for that frame.`
+
+`Provide your response in a JSON array format with the answers and justifications, as follows, and include nothing else in the response:`
+
+`[`
+
+`{`
+
+`"frame": "sexual stigma and transmission routes",`
+
+`"presence": "yes/no",`
+
+`"justification": "a detailed chain of thought explaining your decision",`
+
+`"quote": "if the frame is present, an example quote from the article demonstrating it"`
+
+`},`
+
+`{`
+
+`"frame": "racial disparities and stigmatising name",`
+
+`"presence": "yes/no",`
+
+`"justification": "a detailed chain of thought explaining your decision",`
+
+`"quote": "if the frame is present, an example quote from the article demonstrating it"`
+
+`},`
+
+`{`
+
+`"frame": "global relations",`
+
+`"presence": "yes/no",`
+
+`"justification": "a detailed chain of thought explaining your decision",`
+
+`"quote": "if the frame is present, an example quote from the article demonstrating it"`
+
+`},`
+
+`{`
+
+`"frame": "public health failure",`
+
+`"presence": "yes/no",`
+
+`"justification": "a detailed chain of thought explaining your decision",`
+
+`"quote": "if the frame is present, an example quote from the article demonstrating it"`
+
+`},`
+
+`{`
+
+`"frame": "epidemic preparedness and surveillance",`
+
+`"presence": "yes/no",`
+
+`"justification": "a detailed chain of thought explaining your decision",`
+
+`"quote": "if the frame is present, an example quote from the article demonstrating it"`
+
+`},`
+
+`{`
+
+`"frame": "human-interest stories",`
+
+`"presence": "yes/no",`
+
+`"justification": "a detailed chain of thought explaining your decision",`
+
+`"quote": "if the frame is present, an example quote from the article demonstrating it"`
+
+`},`
+
+`{`
+
+`"frame": "broader health issues",`
+
+`"presence": "yes/no",`
+
+`"justification": "a detailed chain of thought explaining your decision",`
+
+`"quote": "if the frame is present, an example quote from the article demonstrating it"`
+
+`}`
+
+`].`
+
+`If you are uncertain about the annotations for any frame, force a decision to choose "yes" or "no" and then report that uncertainty in your justification. "`
+
+\vspace{0.5em}
+
+**Judge**
+
+\vspace{0.5em}
+
+**`SYSTEM_PROMPT = "`**`You are a communication researcher who is studying news framing surrounding the Mpox epidemic. Two classifiers have read a newspaper article and and identified whether certain frames from a codebook are present in the article or not.  Your job is to go over their responses, chains of thought and the codebook yourself and make the final decision regarding whether the frames are present in the article. The classifiers tend to overlook the "explicit" clause in the codebook that mentions that any presence of frames must be based on explicit presence, so ensure that you check for that. Remember to prioritize accuracy and clarity in your analysis, using the provided context and your expertise to guide your evaluation. Here is the original codebook used for analysis:" + CODEBOOK`
+
+**`USER_PROMPT = "`**`Here are the responses from the two classifiers:`
+
+`Classifier 1: CLASSIFIER_OUTPUT_1`
+
+`Classifier 2: CLASSIFIER_OUTPUT_2`
+
+`Provide your response in a JSON array format, as follows, and include nothing else in the response:`
+
+`{"sexual stigma and transmission routes": "yes/no",`
+
+`"racial disparities and stigmatising name": "yes/no",`
+
+`"global relations": "yes/no",`
+
+`"public health failure": "yes/no",`
+
+`"epidemic preparedness and surveillance": "yes/no",`
+
+`"human-interest stories": "yes/no",`
+
+`"broader health issues": "yes/no"}.`
+
+`If you are uncertain about the annotations for any frame, force a decision to choose "yes" or "no"."`
+
+------------------------------------------------------------------------
+
+##### Human-in-the-loop
+
+\vspace{0.5em}
+
+**Round 1**
+
+`Prompts same as the classifier prompts in "LLM as a judge".`
+
+\vspace{0.5em}
+
+**Round 2**
+
+`Prompts same as mentioned in "LLM prompts for frame detection" in section 1.4.3.`
+
+------------------------------------------------------------------------
+
+##### Decision trees on decomposed task
+
+\vspace{0.5em}
+
+**`SYSTEM_PROMPT = "`**`You're a communication researcher who is studying the news reporting of Mpox. You’ll be analysing an article and answering a series of "yes or no" questions. Here are the questions: " + DECISION_TREE_QUESTIONS`
+
+**`USER_PROMPT = "`**`Ensure that you follow these guidelines:`
+
+`1. Read the entire article carefully before answering`
+
+`2. Some articles maybe irrelevant to the Mpox epidemic. In this case, mark "no" for every question.`
+
+`3. Answer each and every question that is asked.`
+
+`4. All answers must be based on an EXPLICIT interpretation of the article. Thus, if the answer for a question is "yes", but only based on what is implicitly implied, mark "no" for that question.`
+
+`5. If you are uncertain about the answer for any question, force a decision to choose "yes" or "no".`
+
+`Provide your response in a JSON array format, as follows, and include nothing else in the response: { "question 1": "yes/no", "question 2": "yes/no".......}`
+
+`Here's the article: " + ARTICLE_TEXT`
+
+------------------------------------------------------------------------
+
+##### Verbalized confidence scores
+
+\vspace{0.5em}
+
+`For each frame f we prompt with the following:`
+
+**`SYSTEM_PROMPT = "`**`You're a communication researcher who is studying the news reporting of Mpox. You’ll perform a codebook assisted frame analysis on news articles.`
+
+`You're interested in detecting the presence of the frame: f. Here is the codebook definition of the frame:" CODEBOOK_FOR_f`
+
+**`USER_PROMPT =`** `Identify the probability that the frame (""" + frame + """) is present in the news article using the following guidelines:`
+
+`1. Read the entire article carefully before coding`
+
+`2. Some articles maybe irrelevant to the Mpox epidemic. In this case, mark '0'.`
+
+`3. Ensure at least 2 framing dimensions are explicitly present (unless noted otherwise)`
+
+`4. Use frame description and examples to guide decisions`
+
+`Provide your response in a JSON array format as follows, and include nothing else in the response:`
+
+`{"confidence": "A number between 0 (definitely absent) and 1 (definitely present) indicating the probability that the frame exists in the article"}.`
+
+`Here's the article:" + ARTICLE_TEXT`
+:::
+
+# Results
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+#| output: false
+library(Metrics)
+library(irr)
+
+calculate_scores <- function(dlist, A1, A2, column_A1, column_A2, column_match = "stories_id", dropNA = T, silent = T)
+{
+  dfA1 <- dlist[[A1]]
+  dfA2 <- dlist[[A2]]
+
+  kdf1 <- merge(dfA1, dfA2, by.x = column_match, by.y = column_match, all = F)
+
+  #if column names for A1 and A2 are same
+  if(column_A1 == column_A2)
+  {
+    kdf <- kdf1[,c(paste0(column_A1, ".x"), paste0(column_A2, ".y"))]
+  }
+
+  else
+  {
+    kdf <- kdf1[,c(column_A1, column_A2)]
+  }
+
+  colnames(kdf) <- c("A1", "A2")
+
+  if(dropNA)
+  {
+    kdf <- kdf[complete.cases(kdf),]
+  }
+
+  klist <- kappa2(kdf) #kappa calculation
+  k <- round(klist$value, 2) #Cohen's Kappa
+
+  acc <- round(accuracy(kdf[,1],kdf[,2]),2) #accuracy
+  prec <- round(precision(kdf[,1], kdf[,2]), 2) #precision
+  rec <- round(recall(kdf[,1], kdf[,2]), 2) #recall
+  F1 <- round(2*prec*rec/(prec + rec), 2) #F1 score cos the f1 func is broken
+
+  metric_vec <- c(acc, k, F1, prec, rec)
+  
+  if(silent == F)
+  {
+    print(paste0("Accuracy is ", acc, "; Cohen's kappa is ", k, "; F1 score is ",F1,
+               "; Precision is ", prec, "; Recall is ", rec))
+  }
+
+  return(metric_vec)
+}
+
+```
+
+## Relevance classification
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+
+library(kableExtra)
+library(dplyr)
+
+load(here::here("Labelled", "Relevance_test.RData"))
+
+#create table with metrics
+annotators <- c("human_r1", "human_r2", names(relevance_list)[-c(1:4, 9)])
+dfr <- data.frame("Annotator" = annotators,
+                  "Accuracy" = NA,
+                  "Kappa" = NA,
+                  "F1" = NA,
+                  "Precision" = NA,
+                  "Recall" = NA)
+
+#fill with values
+dfr[which(dfr$Annotator=="human_r1"),c(2:6)] <- calculate_scores(relevance_list, "a1_r1", "a2_r1",
+                                                           "relevance", "relevance", column_match = "stories_id")
+dfr[which(dfr$Annotator=="human_r2"),c(2:6)] <- calculate_scores(relevance_list, "a1_r2", "a2_r2",
+                                                           "relevance", "relevance", column_match = "stories_id")
+
+
+#for the rest
+for(m in annotators[-c(1,2)])
+{
+  dfr[which(dfr$Annotator == m), c(2:6)] <- calculate_scores(relevance_list, "a1_r2", m,
+                                                           "relevance", "relevance", column_match = "stories_id")
+}
+
+
+annotator_names <- c("Human (Round 1)", "Human (Round 2)", "Naive Bayes", "BERT", "DeBERTa",
+                     "Llama zero-shot", "Claude zero-shot", "GPT-OSS zero-shot")
+dfr$Annotator <- annotator_names
+
+knitr::kable(dfr, align = 'c', escape = F,
+             caption = "Relevance classification metrics for all annotators. All language model predictions are evaluated against the 
+             labels produced by the first author after round 2 of manual annotation.")
+
+
+```
+
+## Codebook development
+
+### Manual coding {#human-framing-codebook}
+
+After following the standard six-phase thematic analytical procedure [@byrne2022], the manual coders came up with 7 frames, explicated as follows.
+
+::: {.callout-tip icon="false"}
+#### Frame detection codebook
+
+##### Coding Guidelines
+
+1.  Read the entire article carefully before coding
+2.  Identify all frames present in each article
+3.  Mark articles as "irrelevant" (if the article is irrelevant to mpox coverage) or "no frame" (if the article is relevant to mpox but doesn't contain any of the below frames) when appropriate.
+4.  Ensure at least 2 framing dimensions are explicitly present (unless noted otherwise)
+5.  Use frame descriptions and examples to guide decisions
+6.  Record coding decisions and uncertainties systematically
+
+##### Frame A: Sexual Stigma and Transmission Routes
+
+-   **Problem Definition:** Addresses whether Mpox disproportionately affects MSM communities and debates classification as STI or infectious disease spread through close contact
+
+-   **Causal Interpretation:** Explains transmission through sexual contact/behaviors, general close physical contact, or combination of factors; attributes concentration in MSM communities to sexual practices, coincidental network effects, or other social factors
+
+-   **Moral Evaluation:** Ranges from emphasizing stigma avoidance and dignity through neutral reporting to moral judgments about sexual behaviors and lifestyle choices
+
+-   **Treatment Recommendation:** Spans from stigma-informed public health messaging through targeted education to behavioral interventions targeting specific communities
+
+-   **Examples:**
+
+    -   "It's less about sexual identity and more about sexual networks"
+    -   "Health officials emphasize that while MSM communities are disproportionately affected, transmission occurs through close physical contact"
+    -   "Yes, Fauci, Monkeypox Is a 'Gay Disease'"
+
+-   **When not to use:** Simple epidemiological reporting without moral judgment; stigma discussions only about racial aspects of "monkeypox" name
+
+##### Frame B: Racial Disparities and Stigmatizing Name
+
+-   **Problem Definition:** Identifies racial disparities in Mpox cases, vaccine access, and healthcare treatment; debates whether "monkeypox" name is racially stigmatizing
+
+-   **Causal Interpretation:** Attributes disparities to systemic healthcare barriers and historical neglect, individual factors, or dismisses concerns as political correctness
+
+-   **Moral Evaluation:** Presents health equity as moral imperative, acknowledges concerns without strong position, or views racial stigmatization concerns as excessive or politically motivated
+
+-   **Treatment Recommendation:** Advocates for equitable distribution and virus renaming, maintains status quo approaches, or resists targeted interventions while favoring "color-blind" approaches
+
+-   **Examples:**
+
+    -   "Black and Hispanic people have been disproportionately affected by monkeypox—with disparities that are increasing over time—yet they are receiving a lower share of vaccines"
+    -   "The city is working to address vaccine access disparities while examining factors contributing to different infection rates across communities"
+    -   "Originally, we couldn't call monkeypox 'monkeypox' because that was somehow racist"
+
+-   **When not to use:** Race topics unrelated to Mpox; mere mention of racial demographics without discussing disparities
+
+##### Frame C: Global Relations
+
+-   **Problem Definition:** Frames Mpox as global health challenge requiring international cooperation, national issue with international implications, or internal affairs issue for individual nations
+
+-   **Causal Interpretation:** Attributes epidemic to wealthy nations' failure to help endemic regions, complex international factors, or failing healthcare systems in affected countries
+
+-   **Moral Evaluation:** Emphasizes global health equity and condemns wealthy nation neglect, acknowledges competing priorities, or prioritizes national security and citizen protection
+
+-   **Treatment Recommendation:** Advocates coordinated international response and vaccine sharing, balanced domestic and international approach, or travel restrictions and domestic priority
+
+-   **Examples:**
+
+    -   "Monkeypox has been a developing problem for decades and the current global outbreak was avoidable, but the looming threat was largely ignored"
+    -   "International cooperation will be essential for vaccine distribution while countries also address their domestic needs"
+    -   "There have been 72 deaths reported, but all in sub-Saharan Africa where health care, in technical terms, really sucks"
+
+-   **When not to use:** Simple mentions of international spread without taking globalist/isolationist position
+
+##### Frame D: Public Health Failure
+
+-   **Problem Definition:** Criticizes public health response as slow, inadequate, or poorly coordinated; highlights institutional incompetence
+
+-   **Causal Interpretation:** Attributes control challenges to policy choices, institutional weaknesses, funding shortfalls, or historical disinvestment
+
+-   **Examples:**
+
+    -   "Across the nation, public health agencies are running too few tests, and lack the infrastructure to execute a coordinated response"
+    -   "Most Americans do not trust the Biden administration or Dr. Anthony Fauci to properly handle a monkeypox outbreak"
+
+-   **Note:** This frame is primarily diagnostic (one dimension sufficient). Focuses on evaluating public health infrastructure with explicit implications for governmental institutions.
+
+-   **When not to use:** Simple reporting of public health measures without evaluation; outbreak challenges without attributing to systemic failures
+
+##### Frame E: Epidemic Preparedness and Surveillance
+
+-   **Problem Definition:** Presents established institutions as appropriate leaders, mixed assessment of institutional effectiveness, or frames institutions as ineffective/overreaching; characterizes response as under-reaction, proportionate, or alarmist over-reaction
+
+-   **Causal Interpretation:** Places responsibility on institutional systems, shared responsibility across multiple factors, or emphasizes individual and risk group responsibility; attributes success/failure to institutions, complex factors, or individual compliance
+
+-   **Moral Evaluation:** Emphasizes egalitarianism and urgent action necessity, balances collective and individual concerns, or prioritizes individual freedom and proportionate response
+
+-   **Treatment Recommendation:** Recommends declaring emergencies and increased surveillance, supports measured institutional response, or opposes emergencies and advocates deprioritization
+
+-   **Examples:**
+
+    -   "Last weekend, the WHO elevated monkeypox to a public health emergency of international concern (PHEIC). Public health experts say that it's a decision that should have come weeks ago"
+    -   "Officials are weighing the benefits of emergency declarations against concerns about public fatigue and resource allocation"
+    -   "Democrats may use monkeypox as yet another reason to lock us down and force mail-in voting upon us"
+
+-   **Note:** This frame is primarily prognostic (one dimension sufficient). Expresses trust/mistrust in government establishments.
+
+-   **When not to use:** Simple reporting of measures without advocating institutional trust/distrust; points covered by Frame D alone
+
+##### Frame F: Human-Interest Stories
+
+-   **Problem Definition:** Presents personal experiences and episodic narratives from affected communities, emphasizing human side of epidemic
+
+-   **Treatment Recommendation:** Emphasizes community-based support, stigma reduction, healthcare access improvement, and centering affected perspectives
+
+-   **Examples:**
+
+    -   "On Friday, June 17, I got a call from a friend I'd been hanging out with the weekend prior, informing me that I had likely been exposed to monkeypox. For about five to seven days, it just felt like I had crazy abdominal cramps constantly"
+    -   "Local support groups have formed to help people navigate testing and treatment while dealing with stigma in their communities"
+    -   "Lilly Simon, a 33-year-old in Brooklyn, does not have monkeypox. She does have neurofibromatosis type 1, a genetic condition that causes tumors to grow at her nerve endings. Those tumors were filmed surreptitiously by a TikTok user while Ms. Simon was riding the subway" (mistaken identity narrative)
+
+-   **Note:** This frame is episodic (one dimension sufficient). Focuses on personal narratives rather than structural analysis.
+
+-   **When not to use:** Brief mentions of individual cases without narrative development; personal accounts from officials/professionals.
+
+##### Frame G: Broader Health Issues
+
+-   **Problem Definition:** Places Mpox within broader context of infectious diseases and systemic health issues, acknowledges connections to other health challenges, or emphasizes Mpox's distinctiveness while comparing to other pressing issues
+
+-   **Causal Interpretation:** Attributes multiple disease threats to shared structural causes requiring comprehensive solutions, recognizes multiple contributing factors, or emphasizes specific causes while critiquing institutional overreach
+
+-   **Moral Evaluation:** Emphasizes collective responsibility and systemic change imperative, balances individual and collective concerns, or prioritizes individual liberty and efficient resource targeting
+
+-   **Treatment Recommendation:** Advocates strengthened public health infrastructure and addressing root causes, supports targeted improvements, or focuses on pragmatic immediate threat management and fund diversion
+
+-   **Example:**
+
+    -   "We are in danger as a species of more infectious diseases, but we're not putting the public health infrastructure in place... America should be prepared. Not responsive, but proactive"
+    -   "Health experts say monkeypox is unlikely to wreak the same kind of havoc as Covid, which has killed millions, infected more than half a billion people, and ravaged the world's economy"
+    -   "Any of the politicians trying to scare you about this, do not listen to their nonsense. We're not going to go back to Fauci in the '80s trying to tell families they are going to catch AIDS by watching TV together"
+
+-   **Note:** This frame is thematic - requires significant deviation from Mpox focus (few sentences about other health issues sufficient).
+
+-   **When not to use:** Articles focusing strictly on Mpox; brief mentions of other diseases without substantive connections.
+:::
+
+### Discriminative language models
+
+::: {.callout-tip icon="false"}
+##### BERT based topics
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+
+library(kableExtra)
+
+#LOAD TOPICS
+bert_topics <- read.csv(here::here("Codebook/SLM", "BERT_topics.csv"))
+#remove rarer topics
+df_topic <- bert_topics[c(1:10), c("Topic", "Name", "Representation")]
+
+#clean names for better rendering 
+for(i in 1:nrow(df_topic))
+{
+  x <- df_topic$Name[i]
+  
+  #remove digits
+  x <- gsub("[0-9]+", "", x)
+  x <- gsub("[-1]+", "", x)
+  
+  #replace underscores with spaces
+  x <- gsub("_", " ", x)
+  
+  df_topic$Name[i] <- x
+}
+
+df_topic$Topic <- c(1:nrow(df_topic))
+  
+
+knitr::kable(df_topic, align = 'c', escape = F,
+             caption = "Top 10 topics as identified by a BERT topic model applied on all the relevant articles") %>%
+  column_spec(column = 2, width = "10 em") %>%
+  column_spec(column = 3, width = "20 em") 
+  
+
+```
+:::
+
+Upon interpretation, one could map some of the topics to the frames arising out of manual codebook development. In particular:
+
+-   Topic 2 $\to$ Sexual stigma and transmission routes
+
+-   Topic 7 $\to$ Racial disparities and stigmatising name
+
+-   Topics 4 and 8 $\to$ Epidemic preparedness and surveillance
+
+-   Topic 10 $\to$ Broader health issues
+
+Note that if we were to utilize the topic model outcomes as a starting point for codebook development, we would still have to go through the clustered documents and develop a more exhaustive understanding of each frame, since the representative keywords for each topic only partly covers the breadth of the frame as understood via manual coding.
+
+### Generative large language models
+
+::: {.callout-tip icon="false"}
+##### LLM-based inductive thematic analysis
+
+##### 
+
+##### Frame I: Vulnerable Populations
+
+-   **Description:** Emphasizes the disproportionate impact of Mpox on specific groups, such as LGBTQ+ individuals and marginalized communities.
+-   **Problem definition:** The Mpox outbreak affects vulnerable populations disproportionately.
+-   **Causal interpretations:** Societal attitudes, lack of access to healthcare, and systemic inequalities are attributed to the disparities.
+-   **Moral evaluation:** Concern for stigmatizing vulnerable populations and a moral imperative to address health inequities.
+-   **Treatment recommendation:** Increased awareness, education, and targeted public health initiatives for marginalized communities.
+-   **Example:** "CDC data show that monkeypox cases are down dramatically in white men, but nearly 70% of cases are now being detected in Black or Latino men."
+
+##### Frame II: Risk Mitigation
+
+-   **Description:** Focuses on individual behavior change and public education to prevent Mpox transmission.
+-   **Problem definition:** Individuals need guidance on minimizing risk of Mpox infection.
+-   **Causal interpretations:** Human behavior, social networks, and community factors are attributed to the outbreak.
+-   **Moral evaluation:** Concern for protecting individuals from harm and promoting personal responsibility.
+-   **Treatment recommendation:** Guidance and recommendations for individuals at risk, public education campaigns, and community engagement.
+-   **Example:** "People who have monkeypox should stay at home until the rash has healed..."
+
+##### Frame III: Public Health Emergency
+
+-   **Description:** Frames Mpox as a serious public health concern requiring emergency response and funding.
+-   **Problem definition:** The rapid spread of Mpox cases globally causes concern for public health.
+-   **Causal interpretations:** Multiple factors, including viral transmission dynamics and human behavior, are attributed to the outbreak.
+-   **Moral evaluation:** Urgency and importance conveyed, with a focus on addressing the crisis.
+-   **Treatment recommendation:** Vaccination and prevention through behavioral changes are recommended.
+-   **Example:** "The World Health Organization declared Mpox a global health emergency due to its rapid spread."
+
+##### Frame IV: Stigma
+
+-   **Description:** Highlights the fear of retribution and stigma against LGBTQ+ individuals due to Mpox.
+-   **Problem definition:** Fear of retribution and stigma against LGBTQ+ individuals due to Mpox.
+-   **Causal interpretations:** Societal attitudes and lack of understanding are attributed to the stigma.
+-   **Moral evaluation:** Moral imperative to address stigma and promote inclusivity.
+-   **Treatment recommendation:** Increased education, awareness, and support for marginalized communities.
+-   **Example:** "Noyes fears that because the virus has been linked to men who have sex with men, it could spark retribution against people who identify as LGBTQ+ in Humboldt County."
+
+##### Frame V: Vaccine Hesitancy
+
+-   **Description:** Focuses on addressing vaccine hesitancy and promoting trust in public health officials.
+-   **Problem definition:** Limited vaccine uptake among high-risk groups and communities.
+-   **Causal interpretations:** Misinformation and mistrust of vaccines are attributed to the hesitancy.
+-   **Moral evaluation:** Importance of addressing misinformation and promoting vaccine confidence.
+-   **Treatment recommendation:** Efforts to combat misinformation, increase vaccine access, and promote trust in public health officials.
+-   **Example:** "Caulfield said the study is a reminder that public health officials need to adopt a range of responses to address misinformation on social media..."
+
+##### Frame VI: Resource Deficit
+
+-   **Description:** Highlights the limited resources and infrastructure hindering public health response in rural areas.
+-   **Problem definition:** Limited resources and infrastructure hinder public health response in rural areas.
+-   **Causal interpretations:** Systemic issues and lack of funding are attributed to the resource deficits.
+-   **Moral evaluation:** Moral imperative to address resource inequalities and ensure equitable access to healthcare.
+-   **Treatment recommendation:** Increased funding, support for rural healthcare infrastructure, and targeted public health initiatives.
+-   **Example:** "The community health nurse responsible for distributing the vaccine from a state-run clinic in Winnemucca retired months ago, leaving a gap that was only filled with the arrival of a replacement nurse in October."
+
+##### Frame VII: Crisis Response
+
+-   **Description:** Frames Mpox as a crisis requiring immediate attention and response.
+-   **Problem definition:** Mpox outbreak requires urgent response and action.
+-   **Causal interpretations:** Multiple factors, including viral transmission dynamics and human behavior, are attributed to the outbreak.
+-   **Moral evaluation:** Urgency and importance conveyed, with a focus on addressing the crisis.
+-   **Treatment recommendation:** Emergency funding, public health measures, and vaccination efforts are recommended.
+-   **Example:** "The U.S. is working to contain the largest monkeypox outbreak in the world..."
+
+##### Frame VIII: Global Health Cooperation
+
+-   **Description:** Highlights the challenges in achieving global cooperation to address infectious disease threats.
+-   **Problem definition:** Challenges in achieving global cooperation to address Mpox outbreak.
+-   **Causal interpretations:** Systemic issues, lack of funding, and inadequate infrastructure are attributed to the challenges.
+-   **Moral evaluation:** Importance of addressing global health inequities and promoting international cooperation.
+-   **Treatment recommendation:** Increased funding, support for global health infrastructure, and targeted public health initiatives.
+-   **Example:** "...a small but noticeable proportion of people (2% to 3%) with monkeypox became very unwell..."
+
+##### Frame IX: Neurological Complications
+
+-   **Description:** Highlights the uncertainties about neurological complications associated with Mpox infection.
+-   **Problem definition:** Uncertainties about neurological complications associated with Mpox infection.
+-   **Causal interpretations:** Limited research data, complex interactions between viruses and host systems are attributed to the uncertainties.
+-   **Moral evaluation:** Concerns about the impact on public health and safety conveyed.
+-   **Treatment recommendation:** Continued research, monitoring, and transparent communication are recommended.
+-   **Example:** "...a small but noticeable proportion of people (2% to 3%) with monkeypox became very unwell..."
+
+##### Frame X: Government Intervention
+
+-   **Description:** Raises concerns about government involvement in personal lives and health decisions.
+-   **Problem definition:** Concerns about government involvement in personal lives and health decisions.
+-   **Causal interpretations:** Fear, mistrust, and perceived overreach of authority are attributed to the concerns.
+-   **Moral evaluation:** Importance of transparency, trustworthiness, and respect for individual autonomy conveyed.
+-   **Treatment recommendation:** Improved communication, public engagement, and collaborative governance recommended.
+-   **Example:** "'Any herb can clear that up' another man insisted. Wilson also faced a barrage of rejections..."
+
+##### Frame XI: Racial Disparities
+
+-   **Description:** Highlights the disproportionate impact of Mpox on men of color, particularly Black and Latino men.
+-   **Problem definition:** Disproportionate impact of Mpox on men of color, particularly Black and Latino men.
+-   **Causal interpretations:** Systemic racism and lack of access to healthcare are attributed to the disparities.
+-   **Moral evaluation:** Moral imperative to address racial health disparities conveyed.
+-   **Treatment recommendation:** Increased vaccination efforts and targeted public health initiatives for marginalized communities recommended.
+-   **Example:** "CDC data show that monkeypox cases are down dramatically in white men, but nearly 70% of cases are now being detected in Black or Latino men."
+:::
+
+The LLM-based thematic analysis provides natural descriptions for each frame and a codebook, making it a superior approach over encoder-only transformer models. Upon interpretation, one could map some of the LLM frames to the frames arising out of manual codebook development. In particular:
+
+-   Vulnerable populations (I) and Stigma (IV) $\to$ Sexual stigma and transmission routes
+
+-   Racial disparities (XI) $\to$ Racial disparities and stigmatising name
+
+-   Global health co-operation (VIII) $\to$ Global relations
+
+-   Resource deficit (VIII) $\to$ Public health failure
+
+-   Public health emergency (III), Crisis response (VII) and Government intervention (X) $\to$ Epidemic preparedness and surveillance
+
+It is promising that the LLM was able to output frames that are semantically similar to the gold standard. At face value, it may seem as if both the human coders and LLMs are interpreting the texts in a similar way, resulting nearly interchangeable codebooks. However, if the codebooks are truly interchangeable, the outcomes of frame detection using these two codebooks must be compatible. That is, if one were to use the same Llama model on the same test set with two different codebooks - one generated by humans and the other by Llama, with the Llama frames mapped onto semantically similar manual frames; they should yield the same results. However, as seen in the table below, the outcomes do not support the hypothesis that the codebooks are interchangeable. Put simply, even if the codebooks are semantically similar, their pragmatical interpretation may vastly differ.
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+
+library(kableExtra)
+library(dplyr)
+library(snakecase)
+
+#annotations on LLM codebook
+df1 <- read.csv(here::here("Codebook/LLM/", "llama3.1:8b-instruct-q8_0_zshot_llm_codebook.csv"), check.names = F)
+
+#annotations on gold standard codebook
+df_gold <- read.csv(here::here("Framing/LLM/Predicted/Test/","llama3.1:8b-instruct-q8_0_zshot.csv"),
+                    check.names = F)
+
+#map LLM frames to manual frames
+df_pred <- df_gold
+
+df_pred[,'sexual stigma and transmission routes'] <- ifelse(df1[,'vulnerable populations frame'] | df1[,'stigma frame'], 1, 0)
+df_pred[,'racial disparities and stigmatising name'] <- df1[,'racial disparities frame']
+df_pred[,'global relations'] <- df1[,'global health cooperation frame']
+df_pred[,'public health failure'] <- df1[,'resource deficit frame']
+df_pred[,'epidemic preparedness and surveillance'] = ifelse(df1[,'public health emergency frame']|df1[,'crisis response frame']|df1[,'government intervention frame'], 1, 0)
+
+frames_list <- list("LLM-codebook" = df_pred,
+                    "Human-codebook" = df_gold)
+#list of frames
+frames <- c("sexual stigma and transmission routes",
+            "racial disparities and stigmatising name",
+            "global relations",
+            "public health failure",
+            "epidemic preparedness and surveillance")
+
+#create two table with metrics
+#Round 1
+dfr <- data.frame("Frame" = frames,
+                  "Accuracy" = NA,
+                  "Kappa" = NA,
+                  "F1" = NA,
+                  "Precision" = NA,
+                  "Recall" = NA)
+for(f in frames)
+{
+  dfr[which(dfr$Frame==f),c(2:6)] <- calculate_scores(frames_list, "LLM-codebook", "Human-codebook",
+                                                    column_A1 = f, column_A2 = f,
+                                                    column_match = "stories_id")
+}
+dfr <- rbind(dfr, c("mean", round(colMeans(dfr[,c(2:6)]), 2))) #add mean
+dfr$Frame <- to_sentence_case(dfr$Frame) #format text to look better
+
+knitr::kable(dfr, align = 'c', escape = F,
+             caption = "Frame detection metrics comparison for Llama with two different codebooks, one generated by Llama and the other by manual coders") %>%
+  column_spec(column = 1, width = "20em")
+
+```
+
+## Frame detection
+
+### Manual coding
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+
+library(kableExtra)
+library(dplyr)
+library(snakecase)
+
+load(here::here("Labelled", "Framing_test.RData"))
+
+#list of frames
+frames <- c("sexual stigma and transmission routes",
+            "racial disparities and stigmatising name",
+            "global relations",
+            "public health failure",
+            "epidemic preparedness and surveillance",
+            "human-interest stories",
+            "broader health issues")
+
+#create two table with metrics
+#Round 1
+dfr <- data.frame("Frame" = frames,
+                  "Accuracy" = NA,
+                  "Kappa" = NA,
+                  "F1" = NA,
+                  "Precision" = NA,
+                  "Recall" = NA)
+for(f in frames)
+{
+  dfr[which(dfr$Frame==f),c(2:6)] <- calculate_scores(framing_list, "a1_r1", "a2_r1",
+                                                    column_A1 = f, column_A2 = f,
+                                                    column_match = "stories_id")
+}
+dfr <- rbind(dfr, c("mean", round(colMeans(dfr[,c(2:6)]), 2))) #add mean
+dfr$Frame <- to_sentence_case(dfr$Frame) #format text to look better
+
+knitr::kable(dfr, align = 'c', escape = F,
+             caption = "Frame classification metrics for first round of human annotation.") %>%
+  column_spec(column = 1, width = "20em")
+
+#Round 2
+dfr <- data.frame("Frame" = frames,
+                  "Accuracy" = NA,
+                  "Kappa" = NA,
+                  "F1" = NA,
+                  "Precision" = NA,
+                  "Recall" = NA)
+for(f in frames)
+{
+  dfr[which(dfr$Frame==f),c(2:6)] <- calculate_scores(framing_list, "a1_r2", "a2_r2",
+                                                    column_A1 = f, column_A2 = f,
+                                                    column_match = "stories_id")
+}
+dfr <- rbind(dfr, c("mean", round(colMeans(dfr[,c(2:6)]), 2))) #add mean
+dfr$Frame <- to_sentence_case(dfr$Frame) #format text to look better
+
+knitr::kable(dfr, align = 'c', escape = F,
+             caption = "Frame classification metrics for second round of human annotation.")%>%
+  column_spec(column = 1, width = "20em")
+
+
+
+```
+
+### Discriminative language models
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+#| results: asis
+
+library(kableExtra)
+library(dplyr)
+library(snakecase)
+
+load(here::here("Labelled", "Framing_test.RData"))
+
+#list of frames
+frames <- c("sexual stigma and transmission routes",
+            "racial disparities and stigmatising name",
+            "global relations",
+            "public health failure",
+            "epidemic preparedness and surveillance",
+            "human-interest stories",
+            "broader health issues")
+
+models <- c("naive_bayes", "bert", "deberta") #add ensemble
+
+#turn to named list for caption
+names(models) <- c("Naïve Bayes", "BERT-base-cased", "DeBERTa-v3-base")
+
+#create tables for each model metrics
+for(m in models)
+{
+  dfr <- data.frame("Frame" = frames,
+                    "Accuracy" = NA,
+                    "Kappa" = NA,
+                    "F1" = NA,
+                    "Precision" = NA,
+                    "Recall" = NA)
+  
+  for(f in frames)
+  {
+    dfr[which(dfr$Frame==f),c(2:6)] <- calculate_scores(framing_list, "a1_r2", m,
+                                                      column_A1 = f, column_A2 = f,
+                                                      column_match = "stories_id")
+  }
+  
+  dfr <- rbind(dfr, c("mean", round(colMeans(dfr[,c(2:6)], na.rm=T), 2))) #add mean
+  dfr$Frame <- to_sentence_case(dfr$Frame) #format text to look better
+  
+  #create caption
+  cap = paste0(names(models)[which(models==m)], ": classification metrics with predictions evaluated against the 
+             labels produced by the first author after round 2 of manual annotation.")
+  
+  m_tbl <- knitr::kable(dfr, align = 'c', escape = F,
+               caption = cap) %>%
+    column_spec(column = 1, width = "20em")
+  
+  cat(m_tbl, sep = "\n\n")
+}
+```
+
+### Generative large language models
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+#| results: asis
+
+library(kableExtra)
+library(dplyr)
+library(snakecase)
+
+load(here::here("Labelled", "Framing_test.RData"))
+
+#list of frames
+frames <- c("sexual stigma and transmission routes",
+            "racial disparities and stigmatising name",
+            "global relations",
+            "public health failure",
+            "epidemic preparedness and surveillance",
+            "human-interest stories",
+            "broader health issues")
+
+models <- c("llama_zero-shot","llama_ft","gpt-oss_zero-shot", "claude_zero-shot")
+
+#turn to named list for caption
+names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) zero-shot",
+                   "Llama 3.1-8B-Instruct (8-bit quantized) fine-tuned",
+                   "GPT-OSS-20B zero-shot",
+                   "Claude Sonnet 4 zero-shot")
+
+#create tables for each model metrics
+for(m in models)
+{
+  dfr <- data.frame("Frame" = frames,
+                    "Accuracy" = NA,
+                    "Kappa" = NA,
+                    "F1" = NA,
+                    "Precision" = NA,
+                    "Recall" = NA)
+  
+  for(f in frames)
+  {
+    dfr[which(dfr$Frame==f),c(2:6)] <- calculate_scores(framing_list, "a1_r2", m,
+                                                      column_A1 = f, column_A2 = f,
+                                                      column_match = "stories_id")
+  }
+  
+  dfr <- rbind(dfr, c("mean", round(colMeans(dfr[,c(2:6)]), 2))) #add mean
+  dfr$Frame <- to_sentence_case(dfr$Frame) #format text to look better
+  
+  #create caption
+  cap = paste0(names(models)[which(models==m)], " classification metrics with predictions evaluated against the 
+             labels produced by the first author after round 2 of manual annotation.")
+  
+  m_tbl <- knitr::kable(dfr, align = 'c', escape = F,
+               caption = cap) %>%
+    column_spec(column = 1, width = "20em")
+  
+  cat(m_tbl, sep = "\n\n")
+}
+
+```
+
+### Alternative implementation/error mitigation strategies
+
+```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| error: false
+#| results: asis
+
+library(kableExtra)
+library(dplyr)
+library(snakecase)
+
+load(here::here("Labelled", "Framing_test.RData"))
+
+#list of frames
+frames <- c("sexual stigma and transmission routes",
+            "racial disparities and stigmatising name",
+            "global relations",
+            "public health failure",
+            "epidemic preparedness and surveillance",
+            "human-interest stories",
+            "broader health issues")
+
+
+models <- c("llama_llm_judge","llama_human_feedback","llama_decision","llama_confidence",
+            "nb_imb", "bert_imb", "deberta_imb", "ensemble_dsl") 
+
+#turn to named list for caption
+names(models) <- c("Llama 3.1-8B-Instruct (8-bit quantized) with LLM-as-judge",
+                   "Llama 3.1-8B-Instruct (8-bit quantized) with human-in-the-loop",
+                   "Llama 3.1-8B-Instruct (8-bit quantized) with decision trees on decomposed task",
+                   "Llama 3.1-8B-Instruct (8-bit quantized) with verbalized confidence scores",
+                   "Naive Bayes with Class Imbalance management",
+                   "BERT with Class Imbalance management",
+                   "DeBERTa with Class Imbalance management",
+                   "Design-based Supervised learning")
+
+
+#create tables for each model metrics
+for(m in models)
+{
+  dfr <- data.frame("Frame" = frames,
+                    "Accuracy" = NA,
+                    "Kappa" = NA,
+                    "F1" = NA,
+                    "Precision" = NA,
+                    "Recall" = NA)
+  
+  for(f in frames)
+  {
+    dfr[which(dfr$Frame==f),c(2:6)] <- calculate_scores(framing_list, "a1_r2", m,
+                                                      column_A1 = f, column_A2 = f,
+                                                      column_match = "stories_id")
+  }
+  
+  dfr <- rbind(dfr, c("mean", round(colMeans(dfr[,c(2:6)]), 2))) #add mean
+  dfr$Frame <- to_sentence_case(dfr$Frame) #format text to look better
+  
+  #create caption
+  cap = paste0(names(models)[which(models==m)], ": classification metrics with predictions evaluated against the 
+             labels produced by the first author after round 2 of manual annotation.")
+  
+  m_tbl <- knitr::kable(dfr, align = 'c', escape = F,
+               caption = cap) %>%
+    column_spec(column = 1, width = "20em")
+  
+  cat(m_tbl, sep = "\n\n")
+}
+
+```
+
+# References

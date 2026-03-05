@@ -124,7 +124,7 @@ relevance_list <- list(
   
   #Large language models (post 2023)
   "llama_zero-shot" = read.csv("Relevance/LLM/Predicted/llama3.1:8b-instruct-q8_0_zshot_withCB.csv"),
-  "llama_fine-tuned" = read.csv("Relevance/LLM/Predicted/llama3.1:8b-instruct-q8_0_ft.csv"),
+  "llama_ft" = read.csv("Relevance/LLM/Predicted/llama3.1:8b-instruct-q8_0_ft.csv"),
   "claude_zero-shot" = read.csv("Relevance/LLM/Predicted/claude-sonnet-4-20250514_zshot_withCB.csv"),
   "gpt-oss_zero-shot" = read.csv("Relevance/LLM/Predicted/gpt-oss-20b-zshot_withCB.csv")
 )
